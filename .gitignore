@@ -27,3 +27,6 @@
 /AERA/runtime_out.txt
 /AERA/decompiled_objects.txt
 /AERA/cart.out
+
+# Editor Files
+*.bak
