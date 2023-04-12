@@ -1,0 +1,63 @@
+; Create a few categories involved in unlocking locks (and one not so related)
+locks:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+keys:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+state:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+beans:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+
+; Create some objects
+lock:(ent 1) [[SYNC_ONCE now 0 forever root nil]]
+key:(ent 1) [[SYNC_ONCE now 0 forever root nil]]
+bean:(ent 1) [[SYNC_ONCE now 0 forever root nil]]
+
+; Establish the entities
+lock_is_a_lock:(mk.val lock essence locks 1) |[]
+key_is_a_key:(mk.val key essence keys 1) |[]
+bean_is_a_bean:(mk.val bean essence beans 1) |[]
+f_lock_is_a_lock:(fact lock_is_a_lock 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+f_key_is_a_key:(fact key_is_a_key 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+f_bean_is_a_bean:(fact bean_is_a_bean 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+lock_is_locked:(mk.val lock state "locked" 1) |[]
+f_lock_is_locked:(fact lock_is_locked 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+
+; Get some things clear
+key_is_bean:(mk.val key essence beans 1) |[]
+bean_is_key:(mk.val bean essence keys 1) |[]
+f_key_is_not_bean:(|fact key_is_bean 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+f_bean_is_not_key:(|fact bean_is_key 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+
+; State in which we're holding a key
+key_is_held:(cst [] []
+    (fact (mk.val O: essence keys :) T0: T1: : :); Object O is a key
+    (fact (mk.val O: state "held" :) T0: T1: : :); It is being held
+|[]
+|[]
+[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+; State in which we're holding a bean
+bean_is_held:(cst [] []
+    (fact (mk.val O: essence beans :) T0: T1: : :); Object O is a bean
+    (fact (mk.val O: state "held" :) T0: T1: : :); It is being held
+|[]
+|[]
+[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+!def sampling_period 0s:50ms:0us
+
+; Implement a way to unlock things
+use_item:(pgm [] []
+    (ptn (fact (icst key_is_held [] [O:] : :) T0: T1: : :) [])
+|[]
+[]
+    (inj [lock_is_unlocked:(mk.val lock state "unlocked" 1) |[]])
+    (inj []
+        (fact lock_is_unlocked  (+ After sampling_period) (+ Before sampling_period) 1 1)
+        [SYNC_PERIODIC (+ After sampling_period) 1 1 stdin nil]
+    )
+1) |[]
+
+
+(ipgm use_item [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+    [SYNC_ONCE now 0 forever stdin nil 1]
+
+
+; And what do keys do?

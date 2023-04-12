@@ -32,3 +32,6 @@
 *.exe
 *.o
 *.d
+
+# Editor Files
+*.bak

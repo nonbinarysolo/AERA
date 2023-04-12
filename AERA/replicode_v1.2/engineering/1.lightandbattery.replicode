@@ -1,0 +1,70 @@
+; Create a few categories
+lights:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+batteries:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+connection:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+
+; Create some objects
+light:(ent 1) [[SYNC_ONCE now 0 forever root nil]]
+battery:(ent 1) [[SYNC_ONCE now 0 forever root nil]]
+
+; Establish the entities
+light_is_a_light:(mk.val light essence lights 1) |[]
+battery_is_a_battery:(mk.val battery essence batteries 1) |[]
+
+f_light_is_a_light:(fact light_is_a_light 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+f_battery_is_a_battery:(fact battery_is_a_battery 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+
+
+; Two object are connected to each other
+is_connected:(cst |[]
+[]
+   (fact (mk.val A: connection B: :) T0: T1: : :)
+   (fact (mk.val B: connection A: :) T0: T1: : :)
+|[]
+|[]
+[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+; How to represent connections between two objects?
+; mk.val must be a reference to an object, not a value
+light_connectedto_batt:(mk.val light connection batt 1) |[]
+
+; When light is connected to battery, it emits light
+; Goal is to get light
+
+
+; State in which we're holding a key
+;key_is_held:(cst [] []
+;    (fact (mk.val O: essence keys :) T0: T1: : :); Object O is a key
+;    (fact (mk.val O: state "held" :) T0: T1: : :); It is being held
+;|[]
+;|[]
+;[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+; State in which we're holding a bean
+;bean_is_held:(cst [] []
+;    (fact (mk.val O: essence beans :) T0: T1: : :); Object O is a bean
+;    (fact (mk.val O: state "held" :) T0: T1: : :); It is being held
+;|[]
+;|[]
+;[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+!def sampling_period 0s:50ms:0us
+
+; Implement a way to unlock things
+;use_item:(pgm [] []
+;    (ptn (fact (icst key_is_held [] [O:] : :) T0: T1: : :) [])
+;|[]
+;[]
+;    (inj [lock_is_unlocked:(mk.val lock state "unlocked" 1) |[]])
+;    (inj []
+;        (fact lock_is_unlocked  (+ After sampling_period) (+ Before sampling_period) 1 1)
+;        [SYNC_PERIODIC (+ After sampling_period) 1 1 stdin nil]
+;    )
+;1) |[]
+;
+;
+;(ipgm use_item [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+;    [SYNC_ONCE now 0 forever stdin nil 1]
+
+
+; And what do keys do?
