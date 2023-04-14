@@ -1,3 +1,7 @@
+; How things are connected
+!dfn (connect : :)      ; Args are objects to be connected together
+!dfn (disconnect : :)   ; Args are objects to be disconnected from eachother
+
 ; Create a few categories
 lights:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
 batteries:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
@@ -26,7 +30,16 @@ is_connected:(cst |[]
 
 ; How to represent connections between two objects?
 ; mk.val must be a reference to an object, not a value
-light_connectedto_batt:(mk.val light connection batt 1) |[]
+; Have a specific connection object? Could be a CST?
+;light_connectedto_batt:(mk.val light connection [batt] 1) |[]
+
+M0:(mdl |[]
+[]
+   (fact (cmd connect [A: B:] :) : : : :)
+   (fact (icst is_connected |[] [A: B:] : :) : : : : )
+|[]
+|[]
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
 ; When light is connected to battery, it emits light
 ; Goal is to get light
@@ -40,13 +53,6 @@ light_connectedto_batt:(mk.val light connection batt 1) |[]
 ;|[]
 ;[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
-; State in which we're holding a bean
-;bean_is_held:(cst [] []
-;    (fact (mk.val O: essence beans :) T0: T1: : :); Object O is a bean
-;    (fact (mk.val O: state "held" :) T0: T1: : :); It is being held
-;|[]
-;|[]
-;[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
 !def sampling_period 0s:50ms:0us
 
