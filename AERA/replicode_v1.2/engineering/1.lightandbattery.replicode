@@ -1,11 +1,10 @@
-; How things are connected
-!dfn (connect : :)      ; Args are objects to be connected together
-!dfn (disconnect : :)   ; Args are objects to be disconnected from eachother
+!dfn (connect :); connect stuff
 
 ; Create a few categories
 lights:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
 batteries:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
-connection:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+connectedto:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+state:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
 
 ; Create some objects
 light:(ent 1) [[SYNC_ONCE now 0 forever root nil]]
@@ -22,55 +21,96 @@ f_battery_is_a_battery:(fact battery_is_a_battery 0s:0ms:0us GIGASEC 1 1) [[SYNC
 ; Two object are connected to each other
 is_connected:(cst |[]
 []
-   (fact (mk.val A: connection B: :) T0: T1: : :)
-   (fact (mk.val B: connection A: :) T0: T1: : :)
+   (fact (mk.val A: connectedto B: :) T0: T1: : :)
+   (fact (mk.val B: connectedto A: :) T0: T1: : :)
 |[]
 |[]
 [stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
-; How to represent connections between two objects?
-; mk.val must be a reference to an object, not a value
-; Have a specific connection object? Could be a CST?
-;light_connectedto_batt:(mk.val light connection [batt] 1) |[]
-
-M0:(mdl |[]
+; When two things are connected, they share the is_connected CST
+M0:(mdl [A: B:]
 []
-   (fact (cmd connect [A: B:] :) : : : :)
+   (fact (mk.val A: connectedto B: :) T0: T1: : :)
+   (fact (mk.val B: connectedto A: :) T0: T1: : :)
    (fact (icst is_connected |[] [A: B:] : :) : : : : )
 |[]
 |[]
 [stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
 ; When light is connected to battery, it emits light
+M1:(mdl [A: B:]
+[]
+   (fact (mk.val A: essence lights :) : : : :)
+   (fact (mk.val B: essence batteries :) : : : :)
+   (fact (icst is_connected |[] [A: B:] : :) : : : : )
+   (fact (mk.val A: state "on" :) : : : :)
+|[]
+|[]
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
 ; Goal is to get light
+m_drive:(mdl |[]
+[]
+   (fact (mk.val A: state "on" :) : : 1 1)
+   (fact run : : ::)
+|[]
+|[]
+[stdin drives] 1 1 1 0 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
 
-; State in which we're holding a key
-;key_is_held:(cst [] []
-;    (fact (mk.val O: essence keys :) T0: T1: : :); Object O is a key
-;    (fact (mk.val O: state "held" :) T0: T1: : :); It is being held
-;|[]
-;|[]
-;[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
-
-
-!def sampling_period 0s:50ms:0us
-
-; Implement a way to unlock things
-;use_item:(pgm [] []
-;    (ptn (fact (icst key_is_held [] [O:] : :) T0: T1: : :) [])
+; Borrowed from hand-grab-sphere
+pgm_inject_drive:(pgm |[]
+[]
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val light essence lights :) After: Before: ::) |[])
+|[]
+[]
+   (inj []
+      ; The end of the time interval will be used in m_drive as the end of the goal interval.
+      f_run:(fact run After (+ Before 500ms) 1 1)
+      |[]
+   )
+   (inj []
+      G:(goal f_run self nil 1)
+      |[]
+   )
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before injecting the drive.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected drive" |[]])
+1) |[]
+(ipgm pgm_inject_drive |[] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+   
+   
+; TO DO: Detect goal is to connect stuff, so connect it with program
+;pgm_connect:(pgm |[]
+;[]
+;   (ptn (fact G:(goal (fact (cmd connect [A: B:] ::) Cmd_after: Cmd_before: ::) ::) ::) |[])
 ;|[]
 ;[]
-;    (inj [lock_is_unlocked:(mk.val lock state "unlocked" 1) |[]])
-;    (inj []
-;        (fact lock_is_unlocked  (+ After sampling_period) (+ Before sampling_period) 1 1)
-;        [SYNC_PERIODIC (+ After sampling_period) 1 1 stdin nil]
-;    )
+;   ; Limit DeltaP to +/- 20. Inject the fact that the command was executed.
+;   (inj []
+;      Command:(cmd connect [A: B:] 1)
+;      |[]
+;   )
+;   (inj []
+;      (fact Command (+ After 20ms) Before 1 1)
+;      [SYNC_ONCE After 1 1 stdin nil]
+;   )
+;   ; Move h by DeltaP. c moves with h.
+;   (inj []
+;      AtoB:(fact (mk.val A: connectedto B: :) T0: T1: : :)
+;	  BtoA:(fact (mk.val B: connectedto A: :) T0: T1: : :)
+;      |[]
+;   )
+;   (inj []
+;      (fact AtoB (+ After sampling_period) (+ Before sampling_period) 1 1) [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+;	  (fact BtoA (+ After sampling_period) (+ Before sampling_period) 1 1) [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+;   )
+;   (prb [1 "print" "pgm_connect from command:" [Command]])
 ;1) |[]
-;
-;
-;(ipgm use_item [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
-;    [SYNC_ONCE now 0 forever stdin nil 1]
 
-
-; And what do keys do?
+;(ipgm pgm_connect |[] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) [] [SYNC_ONCE now 0 forever emulator nil 1]
