@@ -84,9 +84,13 @@
 //_/_/ 
 //_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
-#include "driver.hpp"
+#ifndef driver_hpp
+#define driver_hpp
 
-// Start AERA normally
-int main(int argc, char** argv) {
-	return startAERA();
-}
+#include "test_mem.h"
+
+// Used to start AERA remotely from the Visualizer
+int32 startAERA();// (int argc, char** argv);
+
+
+#endif
