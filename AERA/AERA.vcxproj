@@ -277,7 +277,7 @@
     <ClInclude Include="IODevices\TCP\tcp_io_device.h" />
     <ClInclude Include="IODevices\video_screen\video_screen.h" />
     <ClInclude Include="IODevices\video_screen\video_screen_io_device.h" />
-    <ClInclude Include="main.h" />
+    <ClInclude Include="AERA_main.h" />
     <ClInclude Include="settings.h" />
     <ClInclude Include="test_mem.h" />
   </ItemGroup>

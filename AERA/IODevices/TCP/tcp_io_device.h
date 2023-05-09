@@ -86,7 +86,11 @@
 #ifndef tcp_io_device_h
 #define tcp_io_device_h
 
-#include "../r_exec/mem.h"
+#ifdef VISUALIZER_REMOTE
+  #include "../AERA/r_exec/mem.h"
+#else
+  #include "../r_exec/mem.h"
+#endif
 
 #ifndef ENABLE_PROTOBUF
 

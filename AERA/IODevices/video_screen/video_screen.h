@@ -54,7 +54,11 @@
 #ifndef video_screen_h
 #define video_screen_h
 
-#include "../r_code/object.h"
+#ifdef VISUALIZER_REMOTE
+  #include "../AERA/r_code/object.h"
+#else
+  #include "../r_code/object.h"
+#endif
 
 namespace video_screen {
 
