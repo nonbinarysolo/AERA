@@ -90,7 +90,12 @@
 
 #define PROTOBUF_USE_DLLS
 
-#include "../r_exec/mem.h"
+#ifdef VISUALIZER_REMOTE
+  #include "../AERA/r_exec/mem.h"
+#else
+  #include "../r_exec/mem.h"
+#endif
+
 #include <map>
 #include <windows.h>
 #include <winsock2.h>
