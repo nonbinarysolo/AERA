@@ -254,7 +254,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>CoreLibrary.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\..\CoreLibrary\trunk\DebugVisualizer;$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\..\CoreLibrary\trunk\DebugVisualizer;$(OutDir);$(SolutionDir)x64\Debug;$(SolutionDir)x64\DebugVisualizer;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
     </Link>

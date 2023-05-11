@@ -40,3 +40,7 @@
 *.exe
 *.o
 *.d
+
+# Others
+*.bak
+
