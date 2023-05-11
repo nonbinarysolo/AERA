@@ -13,6 +13,7 @@
 /Debug/*
 */Debug/*
 */*/Debug/*
+*/*/DebugVisualizer/*
 */*/*/Debug/*
 
 # Visual Studio user files
