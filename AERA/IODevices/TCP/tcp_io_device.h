@@ -87,7 +87,7 @@
 #define tcp_io_device_h
 
 #ifdef VISUALIZER_REMOTE
-  #include "../AERA/r_exec/mem.h"
+  #include "submodules/AERA/r_exec/mem.h"
 #else
   #include "../r_exec/mem.h"
 #endif
