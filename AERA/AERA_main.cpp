@@ -87,15 +87,16 @@
   #include "submodules/AERA/r_comp/decompiler.h"
   #include "submodules/AERA/r_exec/init.h"
   #include "submodules/AERA/r_code/image_impl.h"
+  #include "submodules/AERA/usr_operators/usr_operators.h"
 #else
   #include "decompiler.h"
   #include "init.h"
   #include "image_impl.h"
+  #include "../usr_operators/usr_operators.h"
 #endif
 
 #include "IODevices\TCP\tcp_io_device.h"
 #include "IODevices\video_screen\video_screen_io_device.h"
-#include "../usr_operators/usr_operators.h"
 #include "test_mem.h"
 #include "settings.h"
 #include "AERA_main.h"
@@ -285,6 +286,17 @@ void write_to_file(r_comp::Image* image, std::string& image_path, Decompiler* de
     delete read_image;
   }
 }
+
+/**
+ * UserOperatorLibrary extends FunctionLibrary to implement
+ * functionName where the user operator functions are statically linked.
+ */
+class UserOperatorLibrary : public r_exec::FunctionLibrary {
+public:
+  void* getFunction(const char* function_name) override {
+    return GetUserOperatorFunction(function_name);
+  }
+};
 
 int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
 
