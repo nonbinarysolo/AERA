@@ -83,12 +83,19 @@
 //_/_/ 
 //_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
-#include "decompiler.h"
+#ifdef VISUALIZER_REMOTE
+  #include "submodules/AERA/r_comp/decompiler.h"
+  #include "submodules/AERA/r_exec/init.h"
+  #include "submodules/AERA/r_code/image_impl.h"
+#else
+  #include "decompiler.h"
+  #include "init.h"
+  #include "image_impl.h"
+#endif
+
 #include "IODevices\TCP\tcp_io_device.h"
 #include "IODevices\video_screen\video_screen_io_device.h"
 #include "test_mem.h"
-#include "init.h"
-#include "image_impl.h"
 #include "settings.h"
 #include "AERA_main.h"
 
