@@ -83,12 +83,12 @@
 //_/_/ 
 //_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
-#include "..\r_comp\decompiler.h"
+#include "decompiler.h"
 #include "IODevices\TCP\tcp_io_device.h"
 #include "IODevices\video_screen\video_screen_io_device.h"
 #include "test_mem.h"
-#include "..\r_exec\init.h"
-#include "..\r_code\image_impl.h"
+#include "init.h"
+#include "image_impl.h"
 #include "settings.h"
 #include "AERA_main.h"
 
@@ -100,9 +100,9 @@ using namespace std::chrono;
 using namespace r_code;
 using namespace r_comp;
 
-r_exec::View *build_view(Timestamp time, Code* rstdin) { // this is application dependent WRT view->sync.
+r_exec::View* build_view(Timestamp time, Code* rstdin) { // this is application dependent WRT view->sync.
 
-  r_exec::View *view = new r_exec::View();
+  r_exec::View* view = new r_exec::View();
   const uint32 arity = VIEW_ARITY; // reminder: opcode not included in the arity.
   uint16 write_index = 0;
   uint16 extent_index = arity + 1;
@@ -122,9 +122,9 @@ r_exec::View *build_view(Timestamp time, Code* rstdin) { // this is application 
   return view;
 }
 
-Code *make_object(r_exec::_Mem *mem, Code* rstdin, float32 i) {
+Code* make_object(r_exec::_Mem* mem, Code* rstdin, float32 i) {
 
-  Code *object = new r_exec::LObject(mem);
+  Code* object = new r_exec::LObject(mem);
   //object->code(0)=Atom::Marker(r_exec::GetOpcode("mk.val"),4); // Caveat: arity does not include the opcode.
   object->code(0) = Atom::Marker(r_exec::Opcodes::MkVal, 4); // Caveat: arity does not include the opcode.
   object->code(1) = Atom::RPointer(0);
@@ -138,7 +138,7 @@ Code *make_object(r_exec::_Mem *mem, Code* rstdin, float32 i) {
   return object;
 }
 
-void test_injection(r_exec::_Mem *mem, float32 n) {
+void test_injection(r_exec::_Mem* mem, float32 n) {
 
   Code* rstdin = mem->get_stdin();
 
@@ -166,13 +166,13 @@ void test_injection(r_exec::_Mem *mem, float32 n) {
 
             // Build a fact.
     // tt2 = now;
-    Code *fact = new r_exec::Fact(object, now, now, 1, 1);
+    Code* fact = new r_exec::Fact(object, now, now, 1, 1);
     // uint64 tt = r_exec::Now();
     // v2.push_back(tt - tt2);
 
             // Build a default view for the fact.
     // tt3 = tt;
-    r_exec::View *view = build_view(now, rstdin);
+    r_exec::View* view = build_view(now, rstdin);
     // tt = r_exec::Now();
     // v3.push_back(tt - tt3);
 
@@ -188,7 +188,7 @@ void test_injection(r_exec::_Mem *mem, float32 n) {
   cout << "for-loop total time: " << duration_cast<microseconds>(t2).count() << std::endl;
 }
 
-void test_many_injections(r_exec::_Mem *mem, milliseconds sampling_period, uint32 nRuns, float32 nObjects) {
+void test_many_injections(r_exec::_Mem* mem, milliseconds sampling_period, uint32 nRuns, float32 nObjects) {
   for (; nRuns; --nRuns) {
     auto start = r_exec::Now();
     std::cout << nRuns << '\t';
@@ -201,7 +201,7 @@ void test_many_injections(r_exec::_Mem *mem, milliseconds sampling_period, uint3
   }
 }
 
-void decompile(Decompiler &decompiler, r_comp::Image *image, Timestamp time_reference, bool ignore_named_objects) {
+void decompile(Decompiler& decompiler, r_comp::Image* image, Timestamp time_reference, bool ignore_named_objects) {
 
 #ifdef DECOMPILE_ONE_BY_ONE
   uint32 object_count = decompiler.decompile_references(image);
@@ -233,10 +233,10 @@ void decompile(Decompiler &decompiler, r_comp::Image *image, Timestamp time_refe
 #endif
 }
 
-void write_to_file(r_comp::Image *image, std::string &image_path, Decompiler *decompiler, Timestamp time_reference) {
+void write_to_file(r_comp::Image* image, std::string& image_path, Decompiler* decompiler, Timestamp time_reference) {
 
   ofstream output(image_path.c_str(), ios::binary | ios::out);
-  r_code::Image<r_code::ImageImpl> *serialized_image = image->serialize<r_code::Image<r_code::ImageImpl> >();
+  r_code::Image<r_code::ImageImpl>* serialized_image = image->serialize<r_code::Image<r_code::ImageImpl> >();
   r_code::Image<r_code::ImageImpl>::Write(serialized_image, output);
   output.close();
   delete serialized_image;
@@ -247,11 +247,11 @@ void write_to_file(r_comp::Image *image, std::string &image_path, Decompiler *de
     if (!input.good())
       return;
 
-    r_code::Image<r_code::ImageImpl> *read_image = (r_code::Image<r_code::ImageImpl> *)r_code::Image<r_code::ImageImpl>::Read(input);
+    r_code::Image<r_code::ImageImpl>* read_image = (r_code::Image<r_code::ImageImpl> *)r_code::Image<r_code::ImageImpl>::Read(input);
     input.close();
 
-    resized_vector<Code *> objects;
-    r_comp::Image *temp_image = new r_comp::Image();
+    resized_vector<Code*> objects;
+    r_comp::Image* temp_image = new r_comp::Image();
     temp_image->load(read_image);
 
     decompile(*decompiler, temp_image, time_reference, false);
@@ -279,17 +279,21 @@ int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
   }
 
   std::cout << "> compiling ...\n";
+  r_exec::SharedFunctionLibrary userOperatorLibrary;
+  if (!userOperatorLibrary.load(settings.usr_operator_path_.c_str()))
+    return 2;
+
   if (settings.reduction_core_count_ == 0 && settings.time_core_count_ == 0) {
     // Below, we will use run_in_diagnostic_time.
     // Initialize the diagnostic time to the real now.
     r_exec::_Mem::diagnostic_time_now_ = Time::Get();
     if (!r_exec::Init
-    (settings.usr_operator_path_.c_str(), r_exec::_Mem::get_diagnostic_time_now,
+    (&userOperatorLibrary, r_exec::_Mem::get_diagnostic_time_now,
       settings.usr_class_path_.c_str()))
       return 2;
   }
   else {
-    if (!r_exec::Init(settings.usr_operator_path_.c_str(), Time::Get, settings.usr_class_path_.c_str()))
+    if (!r_exec::Init(&userOperatorLibrary, Time::Get, settings.usr_class_path_.c_str()))
       return 2;
   }
 
@@ -301,7 +305,8 @@ int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
 
     std::cerr << " <- " << error << std::endl;
     return 3;
-  } else {
+  }
+  else {
 
     std::cout << "> ... done\n";
 
@@ -310,7 +315,7 @@ int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
     Decompiler decompiler;
     decompiler.init(&r_exec::Metadata);
 
-    r_comp::Image *image;
+    r_comp::Image* image;
 
     r_exec::_Mem* mem;
     if (settings.io_device_.compare("test_mem") == 0) {
@@ -347,7 +352,7 @@ int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
       // Use the debug stream from settings.xml.
       mem->set_default_runtime_output_stream(&runtime_output_stream);
 
-    resized_vector<r_code::Code *> ram_objects;
+    resized_vector<r_code::Code*> ram_objects;
     r_exec::Seed.get_objects(mem, ram_objects);
 
     mem->init(microseconds(settings.base_period_),
@@ -421,13 +426,14 @@ int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
 
           std::ofstream outfile;
           outfile.open(settings.decompilation_file_path_.c_str(), std::ios_base::trunc);
-          std::streambuf *coutbuf = std::cout.rdbuf(outfile.rdbuf());
+          std::streambuf* coutbuf = std::cout.rdbuf(outfile.rdbuf());
 
           decompile(decompiler, image, starting_time, settings.ignore_named_objects_);
 
           std::cout.rdbuf(coutbuf);
           outfile.close();
-        } else
+        }
+        else
           decompile(decompiler, image, starting_time, settings.ignore_named_objects_);
       }
       delete image;
@@ -449,13 +455,14 @@ int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
 
           std::ofstream outfile;
           outfile.open(decompiled_file_name, std::ios_base::trunc);
-          std::streambuf *coutbuf = std::cout.rdbuf(outfile.rdbuf());
+          std::streambuf* coutbuf = std::cout.rdbuf(outfile.rdbuf());
 
           decompile(decompiler, image, starting_time, settings.ignore_named_models_);
 
           std::cout.rdbuf(coutbuf);
           outfile.close();
-        } else
+        }
+        else
           decompile(decompiler, image, starting_time, settings.ignore_named_models_);
       }
       delete image;
