@@ -84,7 +84,11 @@
 
 #include "test_program.h"
 
-#include "../r_exec/mem.h"
+#ifdef VISUALIZER_REMOTE
+  #include "submodules/AERA/r_exec/mem.h"
+#else
+  #include "../r_exec/mem.h"
+#endif
 
 using namespace r_code;
 
