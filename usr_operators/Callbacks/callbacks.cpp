@@ -86,8 +86,14 @@
 #include <sstream>
 #include "callbacks.h"
 
-#include "../r_exec/mem.h"
-#include "../r_comp/decompiler.h" //debug
+#ifdef VISUALIZER_REMOTE
+  #include "submodules/AERA/r_exec/mem.h"
+  #include "submodules/AERA/r_comp/decompiler.h" //debug
+#else
+  #include "../r_exec/mem.h"
+  #include "../r_comp/decompiler.h" //debug
+#endif
+
 
 using namespace std;
 using namespace std::chrono;
