@@ -620,21 +620,27 @@ AERA_instance::AERA_instance(const char* file_name, const char* decompiled_file_
         self_oid_ = n->first;
     }
   }
-}
 
-void AERA_instance::run() {
   if (!mem_->load(ram_objects_.as_std(), stdin_oid_, stdout_oid_, self_oid_))
     throw 4;
   starting_time_ = mem_->start();
+}
 
+
+void AERA_instance::runUntil(milliseconds stop_time) {
   if (settings_->reduction_core_count_ == 0 && settings_->time_core_count_ == 0) {
-    std::cout << "> running for " << settings_->run_time_ << " ms in diagnostic time\n\n";
-    mem_->run_in_diagnostic_time(milliseconds(settings_->run_time_));
+    std::cout << "> running for " << stop_time.count() << " ms in diagnostic time\n\n";
+    mem_->run_in_diagnostic_time(stop_time);
   }
   else {
-    std::cout << "> running for " << settings_->run_time_ << " ms\n\n";
-    Thread::Sleep(milliseconds(settings_->run_time_));
+    std::cout << "> running for " << stop_time.count() << " ms\n\n";
+    Thread::Sleep(milliseconds(stop_time));
   }
+}
+
+
+void AERA_instance::run() {
+  runUntil(milliseconds(settings_->run_time_));
 }
 
 

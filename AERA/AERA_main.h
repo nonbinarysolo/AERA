@@ -101,6 +101,7 @@
 
 
 using namespace std;
+using namespace std::chrono;
 using namespace r_code;
 using namespace r_comp;
 
@@ -115,8 +116,11 @@ class AERA_instance {
 public:
 	// Create a new instance and set it up
 	AERA_instance(const char* file_name, const char* decompiled_file_name);
+	
+	// Run in diagnostic time up to a certain point
+	void runUntil(milliseconds stop_time);
 
-	// Lets AERA run in diagnostic time
+	// Run AERA all the way to settings->run_time_
 	void run();
 
 	// Shuts everything down
