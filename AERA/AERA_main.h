@@ -85,8 +85,59 @@
 #ifndef main_h
 #define main_h
 
-#include "../submodules/CoreLibrary/CoreLibrary/types.h"
 
+
+#ifdef VISUALIZER_REMOTE
+	#include "submodules/AERA/submodules/CoreLibrary/CoreLibrary/types.h"
+	#include "submodules/AERA/AERA/test_mem.h"
+	#include "submodules/AERA/r_exec/init.h"
+	#include "submodules/AERA/r_comp/decompiler.h"
+#else
+	#include "../submodules/CoreLibrary/CoreLibrary/types.h"
+	#include "test_mem.h"
+	#include "init.h"
+	#include "decompiler.h"
+#endif
+
+
+using namespace std;
+using namespace r_code;
+using namespace r_comp;
+
+
+// Starts, runs, and shuts down AERA in diagnostic time
 core::int32 start_AERA(const char* file_name, const char* decompiled_file_name);
+
+// Forward declaration to avoid circular dependency
+class Settings;
+
+class AERA_instance {
+public:
+	// Create a new instance and set it up
+	AERA_instance(const char* file_name, const char* decompiled_file_name);
+
+	// Lets AERA run in diagnostic time
+	void run();
+
+	// Shuts everything down
+	void stop();
+
+
+private:
+	const char* settings_file_name_;
+	const char* decompiled_file_name_;
+
+	Settings* settings_;
+	ofstream runtime_output_stream_;
+	Decompiler decompiler_;
+	r_comp::Image* image_;
+	r_exec::_Mem* mem_;
+	resized_vector<r_code::Code*> ram_objects_;
+	core::Timestamp starting_time_;
+	
+	uint32 stdin_oid_;
+	uint32 stdout_oid_;
+	uint32 self_oid_;
+};
 
 #endif
