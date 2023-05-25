@@ -493,7 +493,7 @@ int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
 }
 
 
-AERA_instance::AERA_instance(const char* file_name, const char* decompiled_file_name) {
+AERA_interface::AERA_interface(const char* file_name, const char* decompiled_file_name) {
   settings_file_name_ = file_name;
   decompiled_file_name_ = decompiled_file_name;
 
@@ -627,7 +627,7 @@ AERA_instance::AERA_instance(const char* file_name, const char* decompiled_file_
 }
 
 
-void AERA_instance::runUntil(milliseconds stop_time) {
+void AERA_interface::runUntil(milliseconds stop_time) {
   if (settings_->reduction_core_count_ == 0 && settings_->time_core_count_ == 0) {
     std::cout << "> running for " << stop_time.count() << " ms in diagnostic time\n\n";
     mem_->run_in_diagnostic_time(stop_time);
@@ -639,24 +639,26 @@ void AERA_instance::runUntil(milliseconds stop_time) {
 }
 
 
-void AERA_instance::run() {
+void AERA_interface::run() {
   runUntil(milliseconds(settings_->run_time_));
 }
 
 
-void AERA_instance::stop() {
+void AERA_interface::stop() {
   std::cout << "\n> shutting rMem down...\n";
   mem_->stop();
+
+  r_comp::Image* image;
 
   if (settings_->get_objects_) {
     //TimeProbe probe;
     //probe.set();
-    image_ = mem_->get_objects(settings_->keep_invalidated_objects_);
+    image = mem_->get_objects(settings_->keep_invalidated_objects_);
     //probe.check();
-    image_->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+    image->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
 
     if (settings_->write_objects_)
-      write_to_file(image_, settings_->objects_path_, settings_->test_objects_ ? &decompiler_ : NULL, starting_time_);
+      write_to_file(image, settings_->objects_path_, settings_->test_objects_ ? &decompiler_ : NULL, starting_time_);
 
     if (settings_->decompile_objects_ && (!settings_->write_objects_ || !settings_->test_objects_)) {
 
@@ -666,26 +668,26 @@ void AERA_instance::stop() {
         outfile.open(settings_->decompilation_file_path_.c_str(), std::ios_base::trunc);
         std::streambuf* coutbuf = std::cout.rdbuf(outfile.rdbuf());
 
-        decompile(decompiler_, image_, starting_time_, settings_->ignore_named_objects_);
+        decompile(decompiler_, image, starting_time_, settings_->ignore_named_objects_);
 
         std::cout.rdbuf(coutbuf);
         outfile.close();
       }
       else
-        decompile(decompiler_, image_, starting_time_, settings_->ignore_named_objects_);
+        decompile(decompiler_, image, starting_time_, settings_->ignore_named_objects_);
 
-      delete image_;
+      delete image;
     }
 
     if (settings_->get_models_) {
       //TimeProbe probe;
       //probe.set();
-      image_ = mem_->get_models();
+      image = mem_->get_models();
       //probe.check();
-      image_->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+      image->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
 
       if (settings_->write_models_)
-        write_to_file(image_, settings_->models_path_, settings_->test_models_ ? &decompiler_ : NULL, starting_time_);
+        write_to_file(image, settings_->models_path_, settings_->test_models_ ? &decompiler_ : NULL, starting_time_);
 
       if (settings_->decompile_models_ && (!settings_->write_models_ || !settings_->test_models_)) {
 
@@ -695,15 +697,15 @@ void AERA_instance::stop() {
           outfile.open(decompiled_file_name_, std::ios_base::trunc);
           std::streambuf* coutbuf = std::cout.rdbuf(outfile.rdbuf());
 
-          decompile(decompiler_, image_, starting_time_, settings_->ignore_named_models_);
+          decompile(decompiler_, image, starting_time_, settings_->ignore_named_models_);
 
           std::cout.rdbuf(coutbuf);
           outfile.close();
         }
         else
-          decompile(decompiler_, image_, starting_time_, settings_->ignore_named_models_);
+          decompile(decompiler_, image, starting_time_, settings_->ignore_named_models_);
       }
-      delete image_;
+      delete image;
     }
     delete mem_;
 
