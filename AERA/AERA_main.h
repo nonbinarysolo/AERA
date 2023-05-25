@@ -112,16 +112,34 @@ core::int32 start_AERA(const char* file_name, const char* decompiled_file_name);
 // Forward declaration to avoid circular dependency
 class Settings;
 
-class AERA_instance {
+// A class used to remotely-control AERA. It's not a self-contained object,
+// just a grouping of access points to various important components
+class AERA_interface {
 public:
 	// Create a new instance and set it up
-	AERA_instance(const char* file_name, const char* decompiled_file_name);
+	AERA_interface(const char* settings_file_name, const char* decompiled_file_name);
 	
 	// Run in diagnostic time up to a certain point
 	void runUntil(milliseconds stop_time);
 
 	// Run AERA all the way to settings->run_time_
 	void run();
+
+	// Return an image of AERA's current models
+	r_comp::Image getModelsImage() {
+		r_comp::Image image = *mem_->get_objects();
+		image.object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+		return image;
+	}
+
+	// Return the metadata used to interpret the image
+	r_comp::Metadata getMetadata() {
+		return r_exec::Metadata;
+	}
+
+	//r_comp::Compiler getCompiler() {
+  //	return r_exec
+	//}
 
 	// Shuts everything down
 	void stop();
@@ -134,7 +152,6 @@ private:
 	Settings* settings_;
 	ofstream runtime_output_stream_;
 	Decompiler decompiler_;
-	r_comp::Image* image_;
 	r_exec::_Mem* mem_;
 	resized_vector<r_code::Code*> ram_objects_;
 	core::Timestamp starting_time_;
