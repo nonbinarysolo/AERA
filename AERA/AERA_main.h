@@ -127,7 +127,14 @@ public:
 
 	// Return an image of AERA's current models
 	r_comp::Image getModelsImage() {
-		r_comp::Image image = *mem_->get_objects();
+		r_comp::Image image = *mem_->get_models();
+		image.object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+		return image;
+	}
+
+	// Return an image of AERA's current objects
+	r_comp::Image getObjectsImage() {
+		r_comp::Image image = *mem_->get_objects(true);
 		image.object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
 		return image;
 	}
