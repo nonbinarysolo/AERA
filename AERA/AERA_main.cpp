@@ -644,10 +644,8 @@ void AERA_interface::run() {
 }
 
 
-void AERA_interface::stop() {
-  std::cout << "\n> shutting rMem down...\n";
-  mem_->stop();
-
+void AERA_interface::brainDump() {
+  // TO DO: Do I need to enter a critical section here?
   r_comp::Image* image;
 
   if (settings_->get_objects_) {
@@ -707,8 +705,19 @@ void AERA_interface::stop() {
       }
       delete image;
     }
-    delete mem_;
+  }
+}
 
+void AERA_interface::stop() {
+  std::cout << "\n> shutting rMem down...\n";
+  mem_->stop();
+
+  // Dump objects to a decompiled_objects file
+  brainDump();
+
+  // Delete objects if requested
+  if (settings_->get_objects_) {
+    delete mem_;
     r_exec::PipeOStream::Close();
   }
 }

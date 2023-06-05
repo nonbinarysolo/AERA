@@ -125,6 +125,12 @@ public:
 	// Run AERA all the way to settings->run_time_
 	void run();
 
+	// Dump everything AERA's working on to a file for analysis
+	void brainDump();
+
+	// Shuts everything down
+	void stop();
+
 	// Return an image of AERA's current models
 	r_comp::Image getModelsImage() {
 		r_comp::Image image = *mem_->get_models();
@@ -144,12 +150,10 @@ public:
 		return r_exec::Metadata;
 	}
 
-	//r_comp::Compiler getCompiler() {
-  //	return r_exec
-	//}
-
-	// Shuts everything down
-	void stop();
+	// Return this so the visualizer can load in AERA's outputs
+	const char* getDecompiledFileName() {
+		return decompiled_file_name_;
+	}
 
 
 private:
