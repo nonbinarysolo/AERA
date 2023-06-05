@@ -90,5 +90,5 @@ int32 main(int argc, char** argv) {
   const char* file_name = (argc >= 2 ? argv[1] : "settings.xml");
   const char* decompiled_file_name = (argc >= 3 ? argv[2] : "");
 
-  start_AERA(file_name, decompiled_file_name);
+  run_AERA(file_name, decompiled_file_name);
 }

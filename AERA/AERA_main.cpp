@@ -281,7 +281,7 @@ public:
   }
 };
 
-int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
+int32 run_AERA(const char* file_name, const char* decompiled_file_name) {
   core::Time::Init(1000);
 
   Settings settings;

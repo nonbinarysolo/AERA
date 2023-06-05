@@ -107,7 +107,7 @@ using namespace r_comp;
 
 
 // Starts, runs, and shuts down AERA in diagnostic time
-core::int32 start_AERA(const char* file_name, const char* decompiled_file_name);
+core::int32 run_AERA(const char* file_name, const char* decompiled_file_name);
 
 // Forward declaration to avoid circular dependency
 class Settings;
