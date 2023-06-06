@@ -85,8 +85,13 @@
 
 #include "operators.h"
 
-#include "../r_exec/init.h"
-#include "../r_exec/mem.h"
+#ifdef VISUALIZER_REMOTE
+  #include "submodules/AERA/r_exec/init.h"
+  #include "submodules/AERA/r_exec/mem.h"
+#else
+  #include "../r_exec/init.h"
+  #include "../r_exec/mem.h"
+#endif
 
 static uint16 Vec3Opcode;
 static uint16 Vec2Opcode;

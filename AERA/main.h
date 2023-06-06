@@ -85,8 +85,88 @@
 #ifndef main_h
 #define main_h
 
-#include "../submodules/CoreLibrary/CoreLibrary/types.h"
+#ifdef VISUALIZER_REMOTE
+	#include "submodules/AERA/submodules/CoreLibrary/CoreLibrary/types.h"
+	#include "submodules/AERA/AERA/test_mem.h"
+	#include "submodules/AERA/r_exec/init.h"
+	#include "submodules/AERA/r_comp/decompiler.h"
+#else
+	#include "../submodules/CoreLibrary/CoreLibrary/types.h"
+	#include "test_mem.h"
+	#include "init.h"
+	#include "decompiler.h"
+#endif
 
+
+using namespace std;
+using namespace std::chrono;
+using namespace r_code;
+using namespace r_comp;
+
+
+// Starts, runs, and shuts down AERA in diagnostic time
 core::int32 start_AERA(const char* file_name, const char* decompiled_file_name);
+
+// Forward declaration to avoid circular dependency
+class Settings;
+
+class AERA_interface {
+public:
+	// Create a new instance and set it up
+	AERA_interface(const char* settings_file_name, const char* decompiled_file_name);
+
+	// Run in diagnostic time up to a certain point
+	void runUntil(milliseconds stop_time);
+
+	// Run AERA all the way to settings->run_time_
+	void run();
+
+	// Dump everything AERA's working on to a file for analysis
+	void brainDump();
+
+	// Shuts everything down
+	void stop();
+
+	// Return an image of AERA's current models
+	r_comp::Image getModelsImage() {
+		r_comp::Image image = *mem_->get_models();
+		image.object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+		return image;
+	}
+
+	// Return an image of AERA's current objects
+	r_comp::Image getObjectsImage() {
+		r_comp::Image image = *mem_->get_objects(true);
+		image.object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+		return image;
+	}
+
+	// Return the metadata used to interpret the image
+	r_comp::Metadata getMetadata() {
+		return r_exec::Metadata;
+	}
+
+	// Return this so the visualizer can load in AERA's outputs
+	const char* getDecompiledFileName() {
+		return decompiled_file_name_;
+	}
+
+
+private:
+	const char* settings_file_name_;
+	const char* decompiled_file_name_;
+
+	Settings* settings_;
+	ofstream runtime_output_stream_;
+	Decompiler decompiler_;
+	r_exec::_Mem* mem_;
+	resized_vector<r_code::Code*> ram_objects_;
+	core::Timestamp starting_time_;
+
+	uint32 stdin_oid_;
+	uint32 stdout_oid_;
+	uint32 self_oid_;
+};
+
 
 #endif
