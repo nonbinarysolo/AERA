@@ -168,5 +168,4 @@ private:
 	uint32 self_oid_;
 };
 
-
 #endif
