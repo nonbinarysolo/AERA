@@ -100,6 +100,8 @@ static uint16 QuatOpcode;
 
 namespace usr_operators {
 
+namespace usr_operators {
+
 ////////////////////////////////////////////////////////////////////////////////
 
 bool add(const r_exec::Context &context) {
@@ -114,6 +116,33 @@ bool add(const r_exec::Context &context) {
     context.addCompoundResultPart(Atom::Float((*lhs.get_child(2))[0].asFloat() + (*rhs.get_child(2))[0].asFloat()));
     context.addCompoundResultPart(Atom::Float((*lhs.get_child(3))[0].asFloat() + (*rhs.get_child(3))[0].asFloat()));
     return true;
+  }
+
+  if (lhs[0].asOpcode() == Vec2Opcode && rhs[0].asOpcode() == Vec2Opcode) {
+
+    context.setCompoundResultHead(Atom::Object(Vec2Opcode, 2));
+    context.addCompoundResultPart(Atom::Float((*lhs.get_child(1))[0].asFloat() + (*rhs.get_child(1))[0].asFloat()));
+    context.addCompoundResultPart(Atom::Float((*lhs.get_child(2))[0].asFloat() + (*rhs.get_child(2))[0].asFloat()));
+    return true;
+  }
+
+
+  if (lhs[0].asOpcode() == VecOpcode && rhs[0].asOpcode() == VecOpcode) {
+
+    r_exec::Context lhs_vals = *lhs.get_child(1);
+    r_exec::Context rhs_vals = *rhs.get_child(1);
+    if (lhs_vals.get_children_count() == rhs_vals.get_children_count()) {
+
+      int dimensionality = rhs_vals.get_children_count();
+      uint16 vals_index = 2 + context.setCompoundResultHead(Atom::Object(VecOpcode, 1));
+      context.addCompoundResultPart(Atom::IPointer(vals_index));
+
+      context.addCompoundResultPart(Atom::Set(dimensionality));
+      for (int i = 1; i <= dimensionality; ++i) {
+        context.addCompoundResultPart(Atom::Float((*lhs_vals.get_child(i))[0].asFloat() + (*rhs_vals.get_child(i))[0].asFloat()));
+      }
+      return true;
+    }
   }
 
   if (lhs[0].asOpcode() == Vec2Opcode && rhs[0].asOpcode() == Vec2Opcode) {
@@ -170,6 +199,32 @@ bool sub(const r_exec::Context &context) {
     context.addCompoundResultPart(Atom::Float((*lhs.get_child(2))[0].asFloat() - (*rhs.get_child(2))[0].asFloat()));
     context.addCompoundResultPart(Atom::Float((*lhs.get_child(3))[0].asFloat() - (*rhs.get_child(3))[0].asFloat()));
     return true;
+  }
+
+  if (lhs[0].asOpcode() == Vec2Opcode && rhs[0].asOpcode() == Vec2Opcode) {
+
+    context.setCompoundResultHead(Atom::Object(Vec2Opcode, 2));
+    context.addCompoundResultPart(Atom::Float((*lhs.get_child(1))[0].asFloat() - (*rhs.get_child(1))[0].asFloat()));
+    context.addCompoundResultPart(Atom::Float((*lhs.get_child(2))[0].asFloat() - (*rhs.get_child(2))[0].asFloat()));
+    return true;
+  }
+
+  if (lhs[0].asOpcode() == VecOpcode && rhs[0].asOpcode() == VecOpcode) {
+
+    r_exec::Context lhs_vals = *lhs.get_child(1);
+    r_exec::Context rhs_vals = *rhs.get_child(1);
+    if (lhs_vals.get_children_count() == rhs_vals.get_children_count()) {
+
+      int dimensionality = rhs_vals.get_children_count();
+      uint16 vals_index = 2 + context.setCompoundResultHead(Atom::Object(VecOpcode, 1));
+      context.addCompoundResultPart(Atom::IPointer(vals_index));
+
+      context.addCompoundResultPart(Atom::Set(dimensionality));
+      for (int i = 1; i <= dimensionality; ++i) {
+        context.addCompoundResultPart(Atom::Float((*lhs_vals.get_child(i))[0].asFloat() - (*rhs_vals.get_child(i))[0].asFloat()));
+      }
+      return true;
+    }
   }
 
   if (lhs[0].asOpcode() == Vec2Opcode && rhs[0].asOpcode() == Vec2Opcode) {
@@ -411,6 +466,33 @@ bool dis(const r_exec::Context &context) {
     float32 norm2 = d1 * d1 + d2 * d2 + d3 * d3;
     context.setAtomicResult(Atom::Float(sqrt(norm2)));
     return true;
+  }
+
+  if (lhs[0].asOpcode() == Vec2Opcode && rhs[0].asOpcode() == Vec2Opcode) {
+
+    float32 d1 = (*lhs.get_child(1))[0].asFloat() - (*rhs.get_child(1))[0].asFloat();
+    float32 d2 = (*lhs.get_child(2))[0].asFloat() - (*rhs.get_child(2))[0].asFloat();
+
+    float32 norm2 = d1 * d1 + d2 * d2;
+    context.setAtomicResult(Atom::Float(sqrt(norm2)));
+    return true;
+  }
+
+  if (lhs[0].asOpcode() == VecOpcode && rhs[0].asOpcode() == VecOpcode) {
+
+    r_exec::Context lhs_vals = *lhs.get_child(1);
+    r_exec::Context rhs_vals = *rhs.get_child(1);
+    if (lhs_vals.get_children_count() == rhs_vals.get_children_count()) {
+
+      int dimensionality = lhs_vals.get_children_count();
+      float32 norm2 = 0;
+      for (int i = 1; i <= dimensionality; ++i) {
+        float32 d = (*lhs_vals.get_child(i))[0].asFloat() - (*rhs_vals.get_child(i))[0].asFloat();
+        norm2 += (d * d);
+      }
+      context.setAtomicResult(Atom::Float(sqrt(norm2)));
+      return true;
+    }
   }
 
   if (lhs[0].asOpcode() == Vec2Opcode && rhs[0].asOpcode() == Vec2Opcode) {

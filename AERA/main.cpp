@@ -6,6 +6,7 @@
 //_/_/ Copyright (c) 2023 Jeff Thompson
 //_/_/ Copyright (c) 2023 Kristinn R. Thorisson
 //_/_/ Copyright (c) 2023 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2023 Chloe Schaff
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -82,13 +83,640 @@
 //_/_/ 
 //_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
 
-#include "AERA_main.h"
 
-using namespace core;
+#ifdef VISUALIZER_REMOTE
+  #include "submodules/AERA/r_comp/decompiler.h"
+  #include "submodules/AERA/r_exec/init.h"
+  #include "submodules/AERA/r_code/image_impl.h"
+  #include "submodules/AERA/usr_operators/usr_operators.h"
+#else
+  #include "decompiler.h"
+  #include "init.h"
+  #include "image_impl.h"
+  #include "../usr_operators/usr_operators.h"
+#endif
 
-int32 main(int argc, char** argv) {
-  const char* file_name = (argc >= 2 ? argv[1] : "settings.xml");
-  const char* decompiled_file_name = (argc >= 3 ? argv[2] : "");
+#include "IODevices\TCP\tcp_io_device.h"
+#include "IODevices\video_screen\video_screen_io_device.h"
+#include "test_mem.h"
+#include "settings.h"
+#include "main.h"
 
-  run_AERA(file_name, decompiled_file_name);
+
+//#define DECOMPILE_ONE_BY_ONE
+
+using namespace std;
+using namespace std::chrono;
+using namespace r_code;
+using namespace r_comp;
+
+r_exec::View *build_view(Timestamp time, Code* rstdin) { // this is application dependent WRT view->sync.
+
+  r_exec::View *view = new r_exec::View();
+  const uint32 arity = VIEW_ARITY; // reminder: opcode not included in the arity.
+  uint16 write_index = 0;
+  uint16 extent_index = arity + 1;
+
+  view->code(VIEW_OPCODE) = Atom::SSet(r_exec::View::ViewOpcode_, arity);
+  view->code(VIEW_SYNC) = Atom::Float(_View::SYNC_ONCE); // sync on front.
+  view->code(VIEW_IJT) = Atom::IPointer(extent_index); // iptr to injection time.
+  view->code(VIEW_SLN) = Atom::Float(1.0); // sln.
+  view->code(VIEW_RES) = Atom::Float(1); // res is set to 1 upr of the destination group.
+  view->code(VIEW_HOST) = Atom::RPointer(0); // stdin/stdout is the only reference.
+  view->code(VIEW_ORG) = Atom::Nil(); // org.
+
+  Utils::SetTimestamp(&view->code(extent_index), time);
+
+  view->references_[0] = rstdin;
+
+  return view;
+}
+
+Code *make_object(r_exec::_Mem *mem, Code* rstdin, float32 i) {
+
+  Code *object = new r_exec::LObject(mem);
+  //object->code(0)=Atom::Marker(r_exec::GetOpcode("mk.val"),4); // Caveat: arity does not include the opcode.
+  object->code(0) = Atom::Marker(r_exec::Opcodes::MkVal, 4); // Caveat: arity does not include the opcode.
+  object->code(1) = Atom::RPointer(0);
+  object->code(2) = Atom::RPointer(1);
+  object->code(3) = Atom::Float(i);
+  object->code(4) = Atom::Float(1); // psln_thr.
+
+  object->set_reference(0, rstdin);
+  object->set_reference(1, rstdin);
+
+  return object;
+}
+
+void test_injection(r_exec::_Mem *mem, float32 n) {
+
+  Code* rstdin = mem->get_stdin();
+
+  // mem->timings_report.clear();
+
+  // uint64 tt1 = 0;
+  // uint64 tt2 = 0;
+  // uint64 tt3 = 0;
+  // uint64 tt4 = 0;
+
+  // vector<uint64> v1, v2, v3, v4;
+  // v1.reserve(n);
+  // v2.reserve(n);
+  // v3.reserve(n);
+  // v4.reserve(n);
+
+  auto t0 = r_exec::Now();
+
+  for (float32 i = 0; i < n; ++i) {
+    // tt1 = r_exec::Now();
+    Code* object = make_object(mem, rstdin, i);
+
+    auto now = r_exec::Now();
+    // v1.push_back(now - tt1);
+
+            // Build a fact.
+    // tt2 = now;
+    Code *fact = new r_exec::Fact(object, now, now, 1, 1);
+    // uint64 tt = r_exec::Now();
+    // v2.push_back(tt - tt2);
+
+            // Build a default view for the fact.
+    // tt3 = tt;
+    r_exec::View *view = build_view(now, rstdin);
+    // tt = r_exec::Now();
+    // v3.push_back(tt - tt3);
+
+            // Inject the view.
+    // tt4 = tt;
+    view->set_object(fact);
+    mem->inject(view);
+    // v4.push_back(r_exec::Now() - tt4);
+  }
+
+  auto t1 = r_exec::Now();
+  auto t2 = t1 - t0;
+  cout << "for-loop total time: " << duration_cast<microseconds>(t2).count() << std::endl;
+}
+
+void test_many_injections(r_exec::_Mem *mem, milliseconds sampling_period, uint32 nRuns, float32 nObjects) {
+  for (; nRuns; --nRuns) {
+    auto start = r_exec::Now();
+    std::cout << nRuns << '\t';
+    test_injection(mem, nObjects);
+    auto taken = r_exec::Now() - start;
+    if (taken > sampling_period)
+      std::cout << "Good grief! I exceeded the sampling period!" << std::endl;
+    else
+      Thread::Sleep(sampling_period - taken);
+  }
+}
+
+void decompile(Decompiler &decompiler, r_comp::Image *image, Timestamp time_reference, bool ignore_named_objects) {
+
+#ifdef DECOMPILE_ONE_BY_ONE
+  uint32 object_count = decompiler.decompile_references(image);
+  std::cout << object_count << " objects in the image\n";
+  while (1) {
+
+    std::cout << "> which object (-1 to exit)?\n";
+    int32 index; std::cin >> index;
+    if (index == -1)
+      break;
+    if (index >= object_count) {
+
+      std::cout << "> there is only " << object_count << " objects\n";
+      continue;
+    }
+    std::ostringstream decompiled_code;
+    decompiler.decompile_object(index, &decompiled_code, time_reference);
+    std::cout << "\n\n> DECOMPILATION. TimeReference " << Utils::ToString_s_ms_us(time_reference, Timestamp(seconds(0))) << "\n\n" <<
+      decompiled_code.str() << std::endl;
+  }
+#else
+  std::ostringstream decompiled_code;
+  uint32 object_count = decompiler.decompile(image, &decompiled_code, time_reference, ignore_named_objects);
+  //uint32 object_count=image->code_segment_.objects.size();
+  std::cout << "\n\n> DECOMPILATION. TimeReference " << Utils::ToString_s_ms_us(time_reference, Timestamp(seconds(0))) << "\n\n" <<
+    decompiled_code.str() << std::endl;
+  std::cout << "> image taken at: " << Time::ToString_year(image->timestamp_) << std::endl;
+  std::cout << "> " << object_count << " objects\n";
+#endif
+}
+
+void write_to_file(r_comp::Image *image, std::string &image_path, Decompiler *decompiler, Timestamp time_reference) {
+
+  ofstream output(image_path.c_str(), ios::binary | ios::out);
+  r_code::Image<r_code::ImageImpl> *serialized_image = image->serialize<r_code::Image<r_code::ImageImpl> >();
+  r_code::Image<r_code::ImageImpl>::Write(serialized_image, output);
+  output.close();
+  delete serialized_image;
+
+  if (decompiler) {
+
+    ifstream input(image_path.c_str(), ios::binary | ios::in);
+    if (!input.good())
+      return;
+
+    r_code::Image<r_code::ImageImpl> *read_image = (r_code::Image<r_code::ImageImpl> *)r_code::Image<r_code::ImageImpl>::Read(input);
+    input.close();
+
+    resized_vector<Code *> objects;
+    r_comp::Image *temp_image = new r_comp::Image();
+    temp_image->load(read_image);
+
+    decompile(*decompiler, temp_image, time_reference, false);
+    delete temp_image;
+
+    delete read_image;
+  }
+}
+
+/**
+ * UserOperatorLibrary extends FunctionLibrary to implement
+ * functionName where the user operator functions are statically linked.
+ */
+class UserOperatorLibrary : public r_exec::FunctionLibrary {
+public:
+  void* getFunction(const char* function_name) override {
+    return GetUserOperatorFunction(function_name);
+  }
+};
+
+int32 run_AERA(const char* file_name, const char* decompiled_file_name) {
+
+  core::Time::Init(1000);
+
+  Settings settings;
+  if (!settings.load(file_name))
+    return 1;
+
+  ofstream runtime_output_stream;
+  if (settings.runtime_output_file_path_ != "") {
+    runtime_output_stream.open(settings.runtime_output_file_path_);
+    if (!runtime_output_stream.is_open()) {
+      std::cout << "Cannot open runtime_output_file_path \"" << settings.runtime_output_file_path_ << "\"" << std::endl;
+      return 2;
+    }
+  }
+
+  std::cout << "> compiling ...\n";
+  UserOperatorLibrary userOperatorLibrary;
+
+  if (settings.reduction_core_count_ == 0 && settings.time_core_count_ == 0) {
+    // Below, we will use run_in_diagnostic_time.
+    // Initialize the diagnostic time to the real now.
+    r_exec::_Mem::diagnostic_time_now_ = Time::Get();
+    if (!r_exec::Init
+     (&userOperatorLibrary, r_exec::_Mem::get_diagnostic_time_now,
+      settings.usr_class_path_.c_str()))
+      return 2;
+  }
+  else {
+    if (!r_exec::Init(&userOperatorLibrary, Time::Get, settings.usr_class_path_.c_str()))
+      return 2;
+  }
+
+  srand(duration_cast<microseconds>(r_exec::Now().time_since_epoch()).count());
+  Random::Init();
+
+  std::string error;
+  if (!r_exec::Compile(settings.source_file_name_.c_str(), error)) {
+
+    std::cerr << " <- " << error << std::endl;
+    return 3;
+  } else {
+
+    std::cout << "> ... done\n";
+
+    r_exec::PipeOStream::Open(settings.debug_windows_);
+
+    Decompiler decompiler;
+    decompiler.init(&r_exec::Metadata);
+
+    r_comp::Image *image;
+
+    r_exec::_Mem* mem;
+    if (settings.io_device_.compare("test_mem") == 0) {
+      if (settings.get_objects_)
+        mem = new TestMem<r_exec::LObject, r_exec::MemStatic>();
+      else
+        mem = new TestMem<r_exec::LObject, r_exec::MemVolatile>();
+    }
+    else if (settings.io_device_.compare("tcp_io_device") == 0) {
+      string port = "8080";
+      int err = 0;
+      if (settings.get_objects_) {
+        mem = new tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemStatic>();
+        err = static_cast<tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemStatic>*>(mem)->initTCP(port);
+      }
+      else {
+        mem = new tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemVolatile>();
+        err = static_cast<tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemVolatile>*>(mem)->initTCP(port);
+      }
+      if (err != 0) {
+        cout << "ERROR: Could not connect to a TCP client" << endl;
+        delete mem;
+        return err;
+      }
+    }
+    else if (settings.io_device_.compare("video_screen") == 0) {
+      if (settings.get_objects_)
+        mem = new video_screen::VideoScreenIoDevice<r_exec::LObject, r_exec::MemStatic>();
+      else
+        mem = new video_screen::VideoScreenIoDevice<r_exec::LObject, r_exec::MemVolatile>();
+    }
+
+    if (runtime_output_stream.is_open())
+      // Use the debug stream from settings.xml.
+      mem->set_default_runtime_output_stream(&runtime_output_stream);
+
+    resized_vector<r_code::Code *> ram_objects;
+    r_exec::Seed.get_objects(mem, ram_objects);
+
+    mem->init(microseconds(settings.base_period_),
+      settings.reduction_core_count_,
+      settings.time_core_count_,
+      settings.mdl_inertia_sr_thr_,
+      settings.mdl_inertia_cnt_thr_,
+      settings.tpx_dsr_thr_,
+      microseconds(settings.min_sim_time_horizon_),
+      microseconds(settings.max_sim_time_horizon_),
+      settings.sim_time_horizon_factor_,
+      microseconds(settings.tpx_time_horizon_),
+      microseconds(settings.perf_sampling_period_),
+      settings.float_tolerance_,
+      microseconds(settings.time_tolerance_),
+      seconds(settings.primary_thz_),
+      seconds(settings.secondary_thz_),
+      settings.debug_,
+      settings.ntf_mk_resilience_,
+      settings.goal_pred_success_resilience_,
+      settings.probe_level_,
+      settings.trace_levels_,
+      settings.keep_invalidated_objects_);
+
+    uint32 stdin_oid;
+    std::string stdin_symbol("stdin");
+    uint32 stdout_oid;
+    std::string stdout_symbol("stdout");
+    uint32 self_oid;
+    std::string self_symbol("self");
+    unordered_map<uint32, std::string>::const_iterator n;
+    for (n = r_exec::Seed.object_names_.symbols_.begin(); n != r_exec::Seed.object_names_.symbols_.end(); ++n) {
+
+      if (n->second == stdin_symbol)
+        stdin_oid = n->first;
+      else if (n->second == stdout_symbol)
+        stdout_oid = n->first;
+      else if (n->second == self_symbol)
+        self_oid = n->first;
+    }
+
+    if (!mem->load(ram_objects.as_std(), stdin_oid, stdout_oid, self_oid))
+      return 4;
+    auto starting_time = mem->start();
+
+    if (settings.reduction_core_count_ == 0 && settings.time_core_count_ == 0) {
+      std::cout << "> running for " << settings.run_time_ << " ms in diagnostic time\n\n";
+      mem->run_in_diagnostic_time(milliseconds(settings.run_time_));
+    }
+    else {
+      std::cout << "> running for " << settings.run_time_ << " ms\n\n";
+      Thread::Sleep(milliseconds(settings.run_time_));
+    }
+
+    std::cout << "\n> shutting rMem down...\n";
+    mem->stop();
+
+    if (settings.get_objects_) {
+      //TimeProbe probe;
+      //probe.set();
+      image = mem->get_objects(settings.keep_invalidated_objects_);
+      //probe.check();
+      image->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+
+      if (settings.write_objects_)
+        write_to_file(image, settings.objects_path_, settings.test_objects_ ? &decompiler : NULL, starting_time);
+
+      if (settings.decompile_objects_ && (!settings.write_objects_ || !settings.test_objects_)) {
+
+        if (settings.decompile_to_file_) {
+
+          std::ofstream outfile;
+          outfile.open(settings.decompilation_file_path_.c_str(), std::ios_base::trunc);
+          std::streambuf *coutbuf = std::cout.rdbuf(outfile.rdbuf());
+
+          decompile(decompiler, image, starting_time, settings.ignore_named_objects_);
+
+          std::cout.rdbuf(coutbuf);
+          outfile.close();
+        } else
+          decompile(decompiler, image, starting_time, settings.ignore_named_objects_);
+      }
+      delete image;
+    }
+
+    if (settings.get_models_) {
+      //TimeProbe probe;
+      //probe.set();
+      image = mem->get_models();
+      //probe.check();
+      image->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+
+      if (settings.write_models_)
+        write_to_file(image, settings.models_path_, settings.test_models_ ? &decompiler : NULL, starting_time);
+
+      if (settings.decompile_models_ && (!settings.write_models_ || !settings.test_models_)) {
+
+        if (decompiled_file_name && decompiled_file_name[0] != '\0') {
+
+          std::ofstream outfile;
+          outfile.open(decompiled_file_name, std::ios_base::trunc);
+          std::streambuf *coutbuf = std::cout.rdbuf(outfile.rdbuf());
+
+          decompile(decompiler, image, starting_time, settings.ignore_named_models_);
+
+          std::cout.rdbuf(coutbuf);
+          outfile.close();
+        } else
+          decompile(decompiler, image, starting_time, settings.ignore_named_models_);
+      }
+      delete image;
+    }
+    delete mem;
+
+    r_exec::PipeOStream::Close();
+  }
+
+  return 0;
+}
+
+
+AERA_interface::AERA_interface(const char* file_name, const char* decompiled_file_name) {
+  settings_file_name_ = file_name;
+  decompiled_file_name_ = decompiled_file_name;
+
+  core::Time::Init(1000);
+
+  settings_ = new Settings();
+  if (!settings_->load(file_name))
+    throw 1;
+
+
+  if (settings_->runtime_output_file_path_ != "") {
+    runtime_output_stream_.open(settings_->runtime_output_file_path_);
+    if (!runtime_output_stream_.is_open()) {
+      std::cout << "Cannot open runtime_output_file_path \"" << settings_->runtime_output_file_path_ << "\"" << std::endl;
+      throw 2;
+    }
+  }
+
+  std::cout << "> compiling ...\n";
+  UserOperatorLibrary userOperatorLibrary;
+
+  if (settings_->reduction_core_count_ == 0 && settings_->time_core_count_ == 0) {
+    // Below, we will use run_in_diagnostic_time.
+    // Initialize the diagnostic time to the real now.
+    r_exec::_Mem::diagnostic_time_now_ = Time::Get();
+    if (!r_exec::Init
+    (&userOperatorLibrary, r_exec::_Mem::get_diagnostic_time_now,
+      settings_->usr_class_path_.c_str()))
+      throw 2;
+  }
+  else {
+    if (!r_exec::Init(&userOperatorLibrary, Time::Get, settings_->usr_class_path_.c_str()))
+      throw 2;
+  }
+
+  srand(duration_cast<microseconds>(r_exec::Now().time_since_epoch()).count());
+  Random::Init();
+
+  std::string error;
+  if (!r_exec::Compile(settings_->source_file_name_.c_str(), error)) {
+
+    std::cerr << " <- " << error << std::endl;
+    throw 3;
+  }
+  else {
+
+    std::cout << "> ... done\n";
+
+    r_exec::PipeOStream::Open(settings_->debug_windows_);
+
+
+    decompiler_.init(&r_exec::Metadata);
+
+    if (settings_->io_device_.compare("test_mem") == 0) {
+      if (settings_->get_objects_)
+        mem_ = new TestMem<r_exec::LObject, r_exec::MemStatic>();
+      else
+        mem_ = new TestMem<r_exec::LObject, r_exec::MemVolatile>();
+    }
+    else if (settings_->io_device_.compare("tcp_io_device") == 0) {
+      string port = "8080";
+      int err = 0;
+      if (settings_->get_objects_) {
+        mem_ = new tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemStatic>();
+        err = static_cast<tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemStatic>*>(mem_)->initTCP(port);
+      }
+      else {
+        mem_ = new tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemVolatile>();
+        err = static_cast<tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemVolatile>*>(mem_)->initTCP(port);
+      }
+      if (err != 0) {
+        cout << "ERROR: Could not connect to a TCP client" << endl;
+        delete mem_;
+        throw err;
+      }
+    }
+    else if (settings_->io_device_.compare("video_screen") == 0) {
+      if (settings_->get_objects_)
+        mem_ = new video_screen::VideoScreenIoDevice<r_exec::LObject, r_exec::MemStatic>();
+      else
+        mem_ = new video_screen::VideoScreenIoDevice<r_exec::LObject, r_exec::MemVolatile>();
+    }
+
+    if (runtime_output_stream_.is_open())
+      // Use the debug stream from settings.xml.
+      mem_->set_default_runtime_output_stream(&runtime_output_stream_);
+
+
+    r_exec::Seed.get_objects(mem_, ram_objects_);
+
+    mem_->init(microseconds(settings_->base_period_),
+      settings_->reduction_core_count_,
+      settings_->time_core_count_,
+      settings_->mdl_inertia_sr_thr_,
+      settings_->mdl_inertia_cnt_thr_,
+      settings_->tpx_dsr_thr_,
+      microseconds(settings_->min_sim_time_horizon_),
+      microseconds(settings_->max_sim_time_horizon_),
+      settings_->sim_time_horizon_factor_,
+      microseconds(settings_->tpx_time_horizon_),
+      microseconds(settings_->perf_sampling_period_),
+      settings_->float_tolerance_,
+      microseconds(settings_->time_tolerance_),
+      seconds(settings_->primary_thz_),
+      seconds(settings_->secondary_thz_),
+      settings_->debug_,
+      settings_->ntf_mk_resilience_,
+      settings_->goal_pred_success_resilience_,
+      settings_->probe_level_,
+      settings_->trace_levels_,
+      settings_->keep_invalidated_objects_);
+
+    std::string stdin_symbol("stdin");
+    std::string stdout_symbol("stdout");
+    std::string self_symbol("self");
+    unordered_map<uint32, std::string>::const_iterator n;
+    for (n = r_exec::Seed.object_names_.symbols_.begin(); n != r_exec::Seed.object_names_.symbols_.end(); ++n) {
+
+      if (n->second == stdin_symbol)
+        stdin_oid_ = n->first;
+      else if (n->second == stdout_symbol)
+        stdout_oid_ = n->first;
+      else if (n->second == self_symbol)
+        self_oid_ = n->first;
+    }
+  }
+
+  if (!mem_->load(ram_objects_.as_std(), stdin_oid_, stdout_oid_, self_oid_))
+    throw 4;
+  starting_time_ = mem_->start();
+}
+
+
+void AERA_interface::runUntil(milliseconds stop_time) {
+  if (settings_->reduction_core_count_ == 0 && settings_->time_core_count_ == 0) {
+    std::cout << "> running for " << stop_time.count() << " ms in diagnostic time\n\n";
+    mem_->run_in_diagnostic_time(stop_time);
+  }
+  else {
+    std::cout << "> running for " << stop_time.count() << " ms\n\n";
+    Thread::Sleep(milliseconds(stop_time));
+  }
+}
+
+
+void AERA_interface::run() {
+  runUntil(milliseconds(settings_->run_time_));
+}
+
+
+void AERA_interface::brainDump() {
+  // TO DO: Do I need to enter a critical section here?
+  r_comp::Image* image;
+
+  if (settings_->get_objects_) {
+    //TimeProbe probe;
+    //probe.set();
+    image = mem_->get_objects(settings_->keep_invalidated_objects_);
+    //probe.check();
+    image->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+
+    if (settings_->write_objects_)
+      write_to_file(image, settings_->objects_path_, settings_->test_objects_ ? &decompiler_ : NULL, starting_time_);
+
+    if (settings_->decompile_objects_ && (!settings_->write_objects_ || !settings_->test_objects_)) {
+
+      if (settings_->decompile_to_file_) {
+
+        std::ofstream outfile;
+        outfile.open(settings_->decompilation_file_path_.c_str(), std::ios_base::trunc);
+        std::streambuf* coutbuf = std::cout.rdbuf(outfile.rdbuf());
+
+        decompile(decompiler_, image, starting_time_, settings_->ignore_named_objects_);
+
+        std::cout.rdbuf(coutbuf);
+        outfile.close();
+      }
+      else
+        decompile(decompiler_, image, starting_time_, settings_->ignore_named_objects_);
+
+      delete image;
+    }
+
+    if (settings_->get_models_) {
+      //TimeProbe probe;
+      //probe.set();
+      image = mem_->get_models();
+      //probe.check();
+      image->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+
+      if (settings_->write_models_)
+        write_to_file(image, settings_->models_path_, settings_->test_models_ ? &decompiler_ : NULL, starting_time_);
+
+      if (settings_->decompile_models_ && (!settings_->write_models_ || !settings_->test_models_)) {
+
+        if (decompiled_file_name_ && decompiled_file_name_[0] != '\0') {
+
+          std::ofstream outfile;
+          outfile.open(decompiled_file_name_, std::ios_base::trunc);
+          std::streambuf* coutbuf = std::cout.rdbuf(outfile.rdbuf());
+
+          decompile(decompiler_, image, starting_time_, settings_->ignore_named_models_);
+
+          std::cout.rdbuf(coutbuf);
+          outfile.close();
+        }
+        else
+          decompile(decompiler_, image, starting_time_, settings_->ignore_named_models_);
+      }
+      delete image;
+    }
+  }
+}
+
+void AERA_interface::stop() {
+  std::cout << "\n> shutting rMem down...\n";
+  mem_->stop();
+
+  // Dump objects to a decompiled_objects file
+  brainDump();
+
+  // Delete objects if requested
+  if (settings_->get_objects_) {
+    delete mem_;
+    r_exec::PipeOStream::Close();
+  }
 }

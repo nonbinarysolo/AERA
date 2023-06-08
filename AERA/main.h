@@ -6,6 +6,7 @@
 //_/_/ Copyright (c) 2023 Jeff Thompson
 //_/_/ Copyright (c) 2023 Kristinn R. Thorisson
 //_/_/ Copyright (c) 2023 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2023 Chloe Schaff
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -86,7 +87,6 @@
 #define main_h
 
 
-
 #ifdef VISUALIZER_REMOTE
 	#include "submodules/AERA/submodules/CoreLibrary/CoreLibrary/types.h"
 	#include "submodules/AERA/AERA/test_mem.h"
@@ -112,13 +112,11 @@ core::int32 run_AERA(const char* file_name, const char* decompiled_file_name);
 // Forward declaration to avoid circular dependency
 class Settings;
 
-// A class used to remotely-control AERA. It's not a self-contained object,
-// just a grouping of access points to various important components
 class AERA_interface {
 public:
 	// Create a new instance and set it up
 	AERA_interface(const char* settings_file_name, const char* decompiled_file_name);
-	
+
 	// Run in diagnostic time up to a certain point
 	void runUntil(milliseconds stop_time);
 
@@ -166,7 +164,7 @@ private:
 	r_exec::_Mem* mem_;
 	resized_vector<r_code::Code*> ram_objects_;
 	core::Timestamp starting_time_;
-	
+
 	uint32 stdin_oid_;
 	uint32 stdout_oid_;
 	uint32 self_oid_;
