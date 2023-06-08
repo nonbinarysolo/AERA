@@ -208,6 +208,9 @@
     <ClCompile Include="..\usr_operators\TestProgram\test_program.cpp">
       <Filter>usr_operators\TestProgram</Filter>
     </ClCompile>
+    <ClCompile Include="IODevices\TCP\AERA_Protobuf\tcp_data_message.pb.cc">
+      <Filter>IODevices\TCP\AERA_Protobuf</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="settings.h" />
@@ -225,12 +228,6 @@
       <Filter>IODevices\video_screen</Filter>
     </ClInclude>
     <ClInclude Include="main.h" />
-    <ClInclude Include="IODevices\TCP\AERA_Protobuf\tcp_data_message.pb.h">
-      <Filter>IODevices\TCP\AERA_Protobuf</Filter>
-    </ClInclude>
-    <ClInclude Include="IODevices\TCP\AERA_Protobuf\utils.h">
-      <Filter>IODevices\TCP\AERA_Protobuf</Filter>
-    </ClInclude>
     <ClInclude Include="main.h" />
     <ClInclude Include="..\submodules\CoreLibrary\CoreLibrary\base.h">
       <Filter>CoreLibrary</Filter>
@@ -421,6 +418,12 @@
     <ClInclude Include="..\usr_operators\TestProgram\test_program.h">
       <Filter>usr_operators\TestProgram</Filter>
     </ClInclude>
+    <ClInclude Include="IODevices\TCP\Proto\tcp_data_message.pb.h">
+      <Filter>IODevices\TCP\AERA_Protobuf</Filter>
+    </ClInclude>
+    <ClInclude Include="IODevices\TCP\Proto\utils.h">
+      <Filter>IODevices\TCP\AERA_Protobuf</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="settings.xml" />
@@ -470,6 +473,9 @@
     </Filter>
     <Filter Include="usr_operators\TestProgram">
       <UniqueIdentifier>{e787001f-7749-4296-a5de-871c63f5fd62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IODevices\TCP\AERA_Protobuf">
+      <UniqueIdentifier>{576b6fa0-3d5b-4986-864b-941ca45391e9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
