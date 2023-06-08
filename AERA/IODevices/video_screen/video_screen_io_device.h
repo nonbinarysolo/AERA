@@ -57,7 +57,7 @@
 #ifdef VISUALIZER_REMOTE
   #include "submodules/AERA/r_exec/mem.h"
 #else
-#include "../r_exec/mem.h"
+	#include "../r_exec/mem.h"
 #endif
 
 #include "video_screen.h"
