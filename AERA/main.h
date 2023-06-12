@@ -99,6 +99,8 @@
 	#include "decompiler.h"
 #endif
 
+#include "settings.h"
+
 
 using namespace std;
 using namespace std::chrono;
@@ -108,9 +110,6 @@ using namespace r_comp;
 
 // Starts, runs, and shuts down AERA in diagnostic time
 core::int32 run_AERA(const char* file_name, const char* decompiled_file_name);
-
-// Forward declaration to avoid circular dependency
-class Settings;
 
 class AERA_interface {
 public:
@@ -137,9 +136,9 @@ public:
 	}
 
 	// Return an image of AERA's current objects
-	r_comp::Image getObjectsImage() {
-		r_comp::Image image = *mem_->get_objects(true);
-		image.object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+	r_comp::Image* getObjectsImage() {
+		r_comp::Image* image = mem_->get_objects(settings_->keep_invalidated_objects_);
+		image->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_; // Set opcode names
 		return image;
 	}
 
