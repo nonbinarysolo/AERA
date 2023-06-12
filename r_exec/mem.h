@@ -121,6 +121,10 @@ public:
     RUNNING = 1,
     STOPPED = 2
   }State;
+
+  void enterCS() { stateCS_.enter(); }
+  void leaveCS() { stateCS_.leave(); }
+
 protected:
   // Parameters::Init.
   std::chrono::microseconds base_period_;

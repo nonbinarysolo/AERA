@@ -646,13 +646,15 @@ void AERA_interface::run() {
 void AERA_interface::brainDump() {
   // TO DO: Do I need to enter a critical section here?
   r_comp::Image* image;
-
+  mem_->enterCS();
   if (settings_->get_objects_) {
     //TimeProbe probe;
     //probe.set();
+    
     image = mem_->get_objects(settings_->keep_invalidated_objects_);
     //probe.check();
     image->object_names_.symbols_ = r_exec::Seed.object_names_.symbols_;
+    
 
     if (settings_->write_objects_)
       write_to_file(image, settings_->objects_path_, settings_->test_objects_ ? &decompiler_ : NULL, starting_time_);
@@ -705,6 +707,7 @@ void AERA_interface::brainDump() {
       delete image;
     }
   }
+  mem_->leaveCS();
 }
 
 void AERA_interface::stop() {
