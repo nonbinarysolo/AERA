@@ -644,7 +644,6 @@ void AERA_interface::run() {
 
 
 void AERA_interface::brainDump() {
-  // TO DO: Do I need to enter a critical section here?
   r_comp::Image* image;
   mem_->enterCS();
   if (settings_->get_objects_) {
