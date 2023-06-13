@@ -147,11 +147,6 @@ public:
 		return r_exec::Metadata;
 	}
 
-	// Return this so the visualizer can load in AERA's outputs
-	const char* getDecompiledFileName() {
-		return decompiled_file_name_;
-	}
-
 
 private:
 	const char* settings_file_name_;
