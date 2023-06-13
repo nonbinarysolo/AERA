@@ -147,6 +147,11 @@ public:
 		return r_exec::Metadata;
 	}
 
+	// Return start time for Visualizer
+	core::Timestamp getStartTime() {
+		return starting_time_;
+	}
+
 
 private:
 	const char* settings_file_name_;
