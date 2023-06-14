@@ -5,8 +5,8 @@
 //_/_/ 
 //_/_/ Copyright (c) 2023 Jeff Thompson
 //_/_/ Copyright (c) 2023 Kristinn R. Thorisson
+// //_/_/ Copyright (c) 2023 Chloe Schaff
 //_/_/ Copyright (c) 2023 Icelandic Institute for Intelligent Machines
-//_/_/ Copyright (c) 2023 Chloe Schaff
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
