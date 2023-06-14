@@ -142,6 +142,11 @@ public:
 		return image;
 	}
 
+	// Return the names used in the seed program
+	r_comp::ObjectNames getSeedNames() {
+		return r_exec::Seed.object_names_;
+	}
+
 	// Return the metadata used to interpret the image
 	r_comp::Metadata getMetadata() {
 		return r_exec::Metadata;
