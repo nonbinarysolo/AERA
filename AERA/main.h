@@ -116,8 +116,8 @@ public:
 	// Create a new instance and set it up
 	AERA_interface(const char* settings_file_name, const char* decompiled_file_name);
 
-	// Run in diagnostic time up to a certain point
-	void runUntil(milliseconds stop_time);
+	// Run in diagnostic time for a certain amount of time
+	void runFor(milliseconds time_step);
 
 	// Run AERA all the way to settings->run_time_
 	void run();
@@ -173,6 +173,7 @@ private:
 	r_exec::_Mem* mem_;
 	resized_vector<r_code::Code*> ram_objects_;
 	core::Timestamp starting_time_;
+	milliseconds current_time_ = milliseconds(0);
 
 	uint32 stdin_oid_;
 	uint32 stdout_oid_;
