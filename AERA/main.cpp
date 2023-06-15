@@ -626,20 +626,26 @@ AERA_interface::AERA_interface(const char* file_name, const char* decompiled_fil
 }
 
 
-void AERA_interface::runUntil(milliseconds stop_time) {
+void AERA_interface::runFor(milliseconds time_step) {
+  // Make sure AERA doesn't run past the stop time
+  if (current_time_ > milliseconds(settings_->run_time_))
+    return;
+  current_time_ = min(current_time_ + time_step, milliseconds(settings_->run_time_));
+
+  // Run for the specified amount of time
   if (settings_->reduction_core_count_ == 0 && settings_->time_core_count_ == 0) {
-    std::cout << "> running for " << stop_time.count() << " ms in diagnostic time\n\n";
-    mem_->run_in_diagnostic_time(stop_time);
+    std::cout << "> running for " << time_step.count() << " ms in diagnostic time\n\n";
+    mem_->run_in_diagnostic_time(time_step);
   }
   else {
-    std::cout << "> running for " << stop_time.count() << " ms\n\n";
-    Thread::Sleep(milliseconds(stop_time));
+    std::cout << "> running for " << time_step.count() << " ms\n\n";
+    Thread::Sleep(milliseconds(time_step));
   }
 }
 
 
 void AERA_interface::run() {
-  runUntil(milliseconds(settings_->run_time_));
+  runFor(milliseconds(settings_->run_time_));
 }
 
 
