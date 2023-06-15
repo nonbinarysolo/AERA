@@ -157,6 +157,11 @@ public:
 		return starting_time_;
 	}
 
+	// Return the settings file for use in the Visualizer
+	Settings* getSettings() {
+		return settings_;
+	}
+
 
 private:
 	const char* settings_file_name_;
