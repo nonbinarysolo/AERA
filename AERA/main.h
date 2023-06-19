@@ -91,11 +91,13 @@
 	#include "submodules/AERA/submodules/CoreLibrary/CoreLibrary/types.h"
 	#include "submodules/AERA/AERA/test_mem.h"
 	#include "submodules/AERA/r_exec/init.h"
+	#include "submodules/AERA/r_exec/mem.h"
 	#include "submodules/AERA/r_comp/decompiler.h"
 #else
 	#include "../submodules/CoreLibrary/CoreLibrary/types.h"
 	#include "test_mem.h"
 	#include "init.h"
+	#include "mem.h"
 	#include "decompiler.h"
 #endif
 
@@ -106,6 +108,7 @@ using namespace std;
 using namespace std::chrono;
 using namespace r_code;
 using namespace r_comp;
+using namespace r_exec;
 
 
 // Starts, runs, and shuts down AERA in diagnostic time
@@ -117,7 +120,8 @@ public:
 	AERA_interface(const char* settings_file_name, const char* decompiled_file_name);
 
 	// Run in diagnostic time for a certain amount of time
-	void runFor(milliseconds time_step);
+	// Returns false when AERA has run to the end and true otherwise
+	bool runFor(milliseconds time_step);
 
 	// Run AERA all the way to settings->run_time_
 	void run();
@@ -164,20 +168,21 @@ public:
 
 
 private:
+	Decompiler decompiler_;
+	r_exec::_Mem* mem_;
+	resized_vector<r_code::Code*> ram_objects_;
+	DiagnosticTimeState* diagnostic_time_state_;
+	ofstream runtime_output_stream_;
+	uint32 stdin_oid_;
+	uint32 stdout_oid_;
+	uint32 self_oid_;
+
 	const char* settings_file_name_;
 	const char* decompiled_file_name_;
 
 	Settings* settings_;
-	ofstream runtime_output_stream_;
-	Decompiler decompiler_;
-	r_exec::_Mem* mem_;
-	resized_vector<r_code::Code*> ram_objects_;
 	core::Timestamp starting_time_;
 	milliseconds current_time_ = milliseconds(0);
-
-	uint32 stdin_oid_;
-	uint32 stdout_oid_;
-	uint32 self_oid_;
 };
 
 #endif

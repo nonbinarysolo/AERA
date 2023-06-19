@@ -623,29 +623,29 @@ AERA_interface::AERA_interface(const char* file_name, const char* decompiled_fil
   if (!mem_->load(ram_objects_.as_std(), stdin_oid_, stdout_oid_, self_oid_))
     throw 4;
   starting_time_ = mem_->start();
+
+  // Set up the diagnostic time state (it's hooked up to the same _mem as every other call)
+  diagnostic_time_state_ = new DiagnosticTimeState(mem_, milliseconds(settings_->run_time_));
 }
 
 
-void AERA_interface::runFor(milliseconds time_step) {
-  // Make sure AERA doesn't run past the stop time
-  if (current_time_ > milliseconds(settings_->run_time_))
-    return;
-  current_time_ = min(current_time_ + time_step, milliseconds(settings_->run_time_));
+bool AERA_interface::runFor(milliseconds time_step) {
+  // Figure out where to stop
+  Timestamp start = Now();
+  Timestamp end = start + time_step;
 
-  // Run for the specified amount of time
-  if (settings_->reduction_core_count_ == 0 && settings_->time_core_count_ == 0) {
-    std::cout << "> running for " << time_step.count() << " ms in diagnostic time\n\n";
-    mem_->run_in_diagnostic_time(time_step);
-  }
-  else {
-    std::cout << "> running for " << time_step.count() << " ms\n\n";
-    Thread::Sleep(milliseconds(time_step));
-  }
+  // Step until the specified time or until we reach the end
+  while (Now() != end)
+    if (!diagnostic_time_state_->step())
+      return false;
+
+  return true;
 }
 
 
 void AERA_interface::run() {
-  runFor(milliseconds(settings_->run_time_));
+  // When step() returns false, we're all done
+  while (diagnostic_time_state_->step()) {}
 }
 
 
