@@ -635,7 +635,7 @@ bool AERA_interface::runFor(milliseconds time_step) {
   Timestamp end = start + time_step;
 
   // Step until the specified time or until we reach the end
-  while (Now() != end)
+  while (Now() < end)
     if (!diagnostic_time_state_->step())
       return false;
 

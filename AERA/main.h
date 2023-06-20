@@ -166,15 +166,12 @@ public:
 		return settings_;
 	}
 
-	r_exec::_Mem* mem_;
-	DiagnosticTimeState* diagnostic_time_state_;
-
 
 private:
 	Decompiler decompiler_;
-	//r_exec::_Mem* mem_;
+	r_exec::_Mem* mem_;
 	resized_vector<r_code::Code*> ram_objects_;
-	//DiagnosticTimeState* diagnostic_time_state_;
+	DiagnosticTimeState* diagnostic_time_state_;
 	ofstream runtime_output_stream_;
 	uint32 stdin_oid_;
 	uint32 stdout_oid_;
