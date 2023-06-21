@@ -161,6 +161,11 @@ public:
 		return starting_time_;
 	}
 
+	// Return start time for Visualizer
+	core::Timestamp getCurrentTime() {
+		return Now();
+	}
+
 	// Return the settings file for use in the Visualizer
 	Settings* getSettings() {
 		return settings_;
