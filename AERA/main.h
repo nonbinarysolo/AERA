@@ -171,6 +171,11 @@ public:
 		return settings_;
 	}
 
+	// Return a link to mem_ for the Visualizer's InternalEnvView
+	TestMem<r_exec::LObject, r_exec::MemStatic>* getMem() {
+		return (TestMem<r_exec::LObject, r_exec::MemStatic>*) mem_;
+	}
+
 
 private:
 	Decompiler decompiler_;

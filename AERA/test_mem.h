@@ -105,7 +105,7 @@ public:
   /**
    * Call the parent class load(), then set up the objects for the external environment.
    */
-  bool load(const std::vector<r_code::Code *> *objects, uint32 stdin_oid, uint32 stdout_oid, uint32 self_oid) override;
+  bool load(const std::vector<r_code::Code*>* objects, uint32 stdin_oid, uint32 stdout_oid, uint32 self_oid) override;
 
   /**
    * Override eject to check for (cmd set_velocity_y ...) and other implemented commands.
@@ -115,13 +115,31 @@ public:
    * inject it as the efferent copy. However, if the command is not executed, then return NULL
    * and the program controller will put an anti-fact of the command in the mk.rdx reduction.
    */
-  r_code::Code* eject(r_code::Code *command) override;
+  r_code::Code* eject(r_code::Code* command) override;
 
   /**
    * This is called when run_in_diagnostic_time() updates the tickTime. Just call
    * on_time_tick(), because there is no real - time timer thread to call it.
    */
   void on_diagnostic_time_tick() override { on_time_tick(); }
+
+  // Return the identifier so the visualizer knows what to draw
+  std::string getIdentifier() {
+    return identifier_;
+  }
+
+  // These return the current state so it can be drawn in the visualizer
+  float getPositionY() {
+    return position_y_;
+  }
+
+  float getVelocityY() {
+    return velocity_y_;
+  }
+
+  float getForceY() {
+    return force_y_;
+  }
 
 protected:
   class _Thread : public Thread {
@@ -168,6 +186,7 @@ protected:
   uint16 move_y_plus_opcode_;
   uint16 move_y_minus_opcode_;
   Timestamp lastCommandTime_;
+  std::string identifier_;
 
   r_code::Code* yEnt_[10];
   r_code::Code* discretePositionObj_;
