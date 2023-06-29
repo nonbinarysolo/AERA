@@ -171,7 +171,7 @@ public:
 		return settings_;
 	}
 
-	// Return a link to mem_ for the Visualizer's InternalEnvView
+	// Return a link to mem_ for the Visualizer's TaskEnvironmentView
 	TestMem<r_exec::LObject, r_exec::MemStatic>* getMem() {
 		return (TestMem<r_exec::LObject, r_exec::MemStatic>*) mem_;
 	}
