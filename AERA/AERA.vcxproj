@@ -125,7 +125,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\CoreLibrary;..\r_code;..\r_exec;..\r_comp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;ENABLE_PROTOBUF;_DEBUG;_CONSOLE;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <ExceptionHandling />
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -147,7 +147,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\CoreLibrary;..\r_code;..\r_exec;..\r_comp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;ENABLE_PROTOBUF;_DEBUG;_CONSOLE;_ITERATOR_DEBUG_LEVEL=0;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS;ENABLE_PROTOBUF</PreprocessorDefinitions>
       <ExceptionHandling>
       </ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -171,7 +171,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>..\r_code;..\CoreLibrary;..\r_exec;..\r_comp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;ENABLE_PROTOBUF;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
       <ExceptionHandling />
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -196,7 +196,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>..\r_code;..\CoreLibrary;..\r_exec;..\r_comp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;ENABLE_PROTOBUF;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
       <ExceptionHandling>
       </ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -220,7 +220,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\CoreLibrary;..\r_code;..\r_exec;..\r_comp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;DEBUG_VISUALIZER;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;ENABLE_PROTOBUF;_DEBUG;_CONSOLE;DEBUG_VISUALIZER;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <ExceptionHandling />
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -242,7 +242,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\CoreLibrary;..\r_code;..\r_exec;..\r_comp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;DEBUG_VISUALIZER;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;ENABLE_PROTOBUF;_DEBUG;_CONSOLE;DEBUG_VISUALIZER;%(PreprocessorDefinitions);EXECUTIVE_EXPORTS;CORELIBRARY_EXPORTS</PreprocessorDefinitions>
       <ExceptionHandling>
       </ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
