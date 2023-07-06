@@ -177,7 +177,7 @@ thread_ret TDecompiler::Decompile(void *args) {
   std::ostringstream decompiled_code;
   decompiler.decompile(image, &decompiled_code, Utils::GetTimeReference(), imported_objects);
 
-  if (_this->ostream_id_ == 0) {
+  if (_this->ostream_id_ == 0 || true) {
 
     std::cout << _this->header_.c_str();
     std::cout << decompiled_code.str().c_str();
