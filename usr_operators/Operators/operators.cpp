@@ -98,7 +98,6 @@ static uint16 Vec2Opcode;
 static uint16 VecOpcode;
 static uint16 QuatOpcode;
 
-namespace usr_operators {
 
 namespace usr_operators {
 
