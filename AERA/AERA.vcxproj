@@ -238,6 +238,9 @@
     <None Include="replicode_v1.2\ball.goal.external.replicode" />
     <None Include="replicode_v1.2\clcc-figure8.replicode" />
     <None Include="replicode_v1.2\drives.replicode" />
+    <None Include="replicode_v1.2\engineering\1.lightandbattery.replicode" />
+    <None Include="replicode_v1.2\engineering\lockandkey.replicode" />
+    <None Include="replicode_v1.2\engineering\toothbrush1.replicode" />
     <None Include="replicode_v1.2\hand-grab-sphere-learn.external.replicode" />
     <None Include="replicode_v1.2\hand-grab-sphere-learn.external.ur.replicode" />
     <None Include="replicode_v1.2\hand-grab-sphere-learn.replicode" />

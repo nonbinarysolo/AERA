@@ -71,6 +71,9 @@
     <Filter Include="IODevices\TCP\AERA_Protobuf">
       <UniqueIdentifier>{ce2ba5d1-fcef-4708-80fe-1d70bea0460c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="replicode_v1.2\engineering">
+      <UniqueIdentifier>{23512954-c817-4696-86cf-efc0fdfb8e95}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="Demo1\initial.HLP.replicode">
@@ -300,6 +303,15 @@
     </None>
     <None Include="replicode_v1.2\hand-grab-sphere-learn.external.ur.replicode">
       <Filter>replicode_v1.2</Filter>
+    </None>
+    <None Include="replicode_v1.2\engineering\1.lightandbattery.replicode">
+      <Filter>replicode_v1.2\engineering</Filter>
+    </None>
+    <None Include="replicode_v1.2\engineering\lockandkey.replicode">
+      <Filter>replicode_v1.2\engineering</Filter>
+    </None>
+    <None Include="replicode_v1.2\engineering\toothbrush1.replicode">
+      <Filter>replicode_v1.2\engineering</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

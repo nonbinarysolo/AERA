@@ -39,6 +39,9 @@
 !dfn (tick :)
 !dfn (measure :); arg0: an entity to measure. e.g. measure [camera] to take a measurement with the camera.
 
+; functions for engineering experiments.
+!dfn (use_tool :); arg0: a tool, arg1: what it's used on
+
 ; The sampling_period should be 2 * base_period, where base_period is from settings.xml.
 !def sampling_period 100ms
 

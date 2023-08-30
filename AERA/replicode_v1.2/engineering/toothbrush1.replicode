@@ -1,0 +1,29 @@
+; EDA Melts a Toothbrush v1
+
+; Set up the ontologies
+screwdriver:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+screw:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+state:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+
+; Set up the screw
+s:(ent 1) [[SYNC_ONCE now 1 forever root nil]]
+s_is_screw:(mk.val s essence screw 1) |[]
+(fact s_is_screw 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+
+; Set up the screwdriver
+d:(ent 1) [[SYNC_ONCE now 1 forever root nil]]
+d_is_screwdriver:(mk.val s essence screwdriver 1) |[]
+(fact d_is_screwdriver 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+
+; If we use the screwdriver on the screw, it will be unscrewed
+M0:(mdl [D: S: (ti T0: T1:)] []
+   (fact (cmd use_tool [D: S:] :) T0: T1: : : ); Using the screwdriver
+   (fact (mk.val S: state "unscrewed" :) T1: GIGASEC : :)
+|[]
+|[]
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+; Do I need an initial "screwed in" state? Maybe CSTs to go with it?
+
+; TO DO: Implement emulator program to catch commands
+; TO DO: Add in goals and drive injection
