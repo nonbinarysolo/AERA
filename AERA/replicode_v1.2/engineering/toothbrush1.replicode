@@ -15,6 +15,14 @@ d:(ent 1) [[SYNC_ONCE now 1 forever root nil]]
 d_is_screwdriver:(mk.val s essence screwdriver 1) |[]
 (fact d_is_screwdriver 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
 
+; S is a screw and it is screwed in
+S0:(cst [] []
+   (fact (mk.val S: essence screw :) T0: T1: : :)
+   (fact (mk.val S: state "screwed in" :) T0: T1: : :)
+|[]
+|[]
+[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
 ; If we use the screwdriver on the screw, it will be unscrewed
 M0:(mdl [D: S: (ti T0: T1:)] []
    (fact (cmd use_tool [D: S:] :) T0: T1: : : ); Using the screwdriver
@@ -22,6 +30,14 @@ M0:(mdl [D: S: (ti T0: T1:)] []
 |[]
 |[]
 [stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+M1:(mdl [] []
+   (fact (icst S0 [] [S:] : :) T0: T1: : :)
+   (fact (imdl M0 [D: S: (ti T0: T1:)] [uhh] : :) T0: T1: : :)
+|[]
+|[]
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
 
 ; Do I need an initial "screwed in" state? Maybe CSTs to go with it?
 

@@ -313,6 +313,9 @@
     <None Include="replicode_v1.2\engineering\toothbrush1.replicode">
       <Filter>replicode_v1.2\engineering</Filter>
     </None>
+    <None Include="replicode_v1.2\engineering\hand-grab-sphere-mods.replicode">
+      <Filter>replicode_v1.2\engineering</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="NatvisFile.natvis" />
