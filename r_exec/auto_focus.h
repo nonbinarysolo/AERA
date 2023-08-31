@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -146,7 +146,7 @@ private:
   static const uint32 CacheInitialSize = 128;
   static const uint32 CrossBufferInitialSize = 1024;
 
-  r_code::time_buffer<CInput, CInput::IsInvalidated> cache_; // contains all inputs we don't no yet if they are relevant or not; thz==sampling period.
+  r_code::time_buffer<CInput, CInput::IsInvalidated> cache_; // contains all inputs we don't know yet if they are relevant or not; thz==sampling period.
   r_code::time_buffer<Input, Input::IsInvalidated> cross_buffer_; // contains all relevant inputs.
 
   void notify(_Fact *target, View *input, TPXMap &map);
@@ -171,14 +171,13 @@ private:
     } else
       return new T(this, target, pattern, bm, f_imdl);
   }
-  void rate(_Fact *target, bool success, TPXMap &map, RatingMap &ratings);
 public:
   AutoFocusController(r_code::_View *view);
   ~AutoFocusController();
 
-  r_code::Code *get_core_object() const;
+  r_code::Code *get_core_object() const override;
 
-  void take_input(r_exec::View *input);
+  void take_input(r_exec::View *input) override;
   void reduce(r_exec::View *input);
 
   View *inject_input(View *input); // inject a filtered input into the output groups starting from 0; return the view injected in the primary group.

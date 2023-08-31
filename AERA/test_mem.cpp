@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ Copyright (c) 2021 Arash Sheikhlar
 //_/_/ http://www.iiim.is
 //_/_/ 
@@ -133,7 +133,7 @@ template<class O, class S> TestMem<O, S>::~TestMem() {
 }
 
 template<class O, class S> bool TestMem<O, S>::load
-(vector<Code*> *objects, uint32 stdin_oid, uint32 stdout_oid,
+(const vector<Code*> *objects, uint32 stdin_oid, uint32 stdout_oid,
   uint32 self_oid) {
   // Call the method in the parent class.
   if (!MemExec<O, S>::load(objects, stdin_oid, stdout_oid, self_oid))

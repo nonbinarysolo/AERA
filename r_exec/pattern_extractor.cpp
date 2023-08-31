@@ -3,9 +3,10 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2023 Leonard M. Eberding
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -86,6 +87,8 @@
 #include "reduction_job.h"
 #include "mem.h"
 #include "model_base.h"
+#include "hlp_context.h"
+#include "mdl_controller.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -364,6 +367,8 @@ _Fact *_TPX::make_f_icst(_Fact *component, _Fact*& component_pattern, P<Code> &n
   // build_cst adds the abstract object of the component as the first reference.
   component_pattern = (_Fact*)new_cst->get_reference(0);
   _Fact *f_icst = bm->build_f_ihlp(new_cst, Opcodes::ICst, false);
+  // build_f_ihlp can leave some variables pointing into bm, but we need everything valuated.
+  f_icst->set_reference(0, bm->bind_pattern(f_icst->get_reference(0)));
   f_icsts_.push_back(f_icst); // the f_icst can be reused in subsequent model building attempts.
   return f_icst;
 }
@@ -427,17 +432,52 @@ Code *_TPX::build_cst(const vector<Component> &components, BindingMap *bm, _Fact
 
 Code *_TPX::build_mdl_head(HLPBindingMap *bm, uint16 tpl_arg_count, _Fact *lhs, _Fact *rhs, uint16 &write_index, bool allow_shared_timing_vars) {
 
-  Code *mdl = _Mem::Get()->build_object(Atom::Model(Opcodes::Mdl, MDL_ARITY));
+  Code* abstract_lhs = bm->abstract_object(lhs, false, allow_shared_timing_vars ? 0 : -1);
 
-  mdl->add_reference(bm->abstract_object(lhs, false, allow_shared_timing_vars)); // reference lhs.
-  mdl->add_reference(bm->abstract_object(rhs, false, allow_shared_timing_vars)); // reference rhs.
+  int rhs_first_search_index = (allow_shared_timing_vars ? 0 : -1);
+  if (abstract_lhs->get_reference(0)->code(0).asOpcode() == Opcodes::IMdl) {
+    Code* imdl = abstract_lhs->get_reference(0);
+    // This is a reuse model. When matching the timings of the RHS fact, first try the last two
+    // exposed args which came from the RHS timings of the imdl being reused.
+    auto exposed_args_index = imdl->code(I_HLP_EXPOSED_ARGS).asIndex();
+    auto exposed_args_count = imdl->code(exposed_args_index).getAtomCount();
+    auto exposed_after_index = exposed_args_index + (exposed_args_count - 1);
+    if (exposed_args_count >= 2 &&
+        imdl->code(exposed_after_index).getDescriptor() == Atom::VL_PTR)
+      rhs_first_search_index = imdl->code(exposed_after_index).asIndex();
+  }
+  Code* abstract_rhs = bm->abstract_object(rhs, false, rhs_first_search_index);
+
+  return build_mdl_head_from_abstract(tpl_arg_count, abstract_lhs, abstract_rhs, write_index);
+}
+
+Code* _TPX::build_mdl_head_from_abstract(uint16 tpl_arg_count, Code* abstract_lhs, Code* abstract_rhs, uint16& write_index) {
+  Code* mdl = _Mem::Get()->build_object(Atom::Model(Opcodes::Mdl, MDL_ARITY));
+  mdl->add_reference(abstract_lhs); // reference lhs.
+  mdl->add_reference(abstract_rhs); // reference rhs.
 
   write_index = MDL_ARITY;
 
   mdl->code(MDL_TPL_ARGS) = Atom::IPointer(++write_index);
-  mdl->code(write_index) = Atom::Set(tpl_arg_count);
-  for (uint16 i = 0; i < tpl_arg_count; ++i)
-    mdl->code(++write_index) = Atom::VLPointer(i);
+  if (tpl_arg_count >= 2) {
+    // Assume the last two template args are a time interval.
+    mdl->code(write_index) = Atom::Set(tpl_arg_count - 1);
+    // Write the template args before the time interval.
+    for (uint16 i = 0; i < tpl_arg_count - 2; ++i)
+      mdl->code(++write_index) = Atom::VLPointer(i);
+    ++write_index;
+    mdl->code(write_index) = Atom::IPointer(write_index + 1);
+    ++write_index;
+    // Make the (ti : :) .
+    mdl->code(write_index) = Atom::Object(Opcodes::TI, 2);
+    mdl->code(++write_index) = Atom::VLPointer(tpl_arg_count - 2);
+    mdl->code(++write_index) = Atom::VLPointer(tpl_arg_count - 1);
+  }
+  else {
+    mdl->code(write_index) = Atom::Set(tpl_arg_count);
+    for (uint16 i = 0; i < tpl_arg_count; ++i)
+      mdl->code(++write_index) = Atom::VLPointer(i);
+  }
 
   mdl->code(MDL_OBJS) = Atom::IPointer(++write_index);
   mdl->code(write_index) = Atom::Set(2);
@@ -550,7 +590,10 @@ void GTPX::reduce(r_exec::View *input) { // input->object: f->success.
 
   _Fact *consequent = (_Fact *)input->object_->get_reference(0)->get_reference(1);
   P<BindingMap> consequent_bm = new BindingMap();
-  _Fact *abstracted_consequent = (_Fact *)consequent_bm->abstract_object(consequent, false);
+  {
+    // Call abstract_object only to update the binding map.
+    P<Code> unused = consequent_bm->abstract_object(consequent, false);
+  }
 
   for (uint32 i = 0; i < predictions_.size(); ++i) { // check if some models have successfully predicted the target: if so, abort.
 
@@ -699,21 +742,90 @@ void PTPX::reduce(r_exec::View *input) {
 
   auto analysis_starting_time = Now();
 
-  _Fact *consequent = new Fact((Fact *)f_imdl_); // input->object is the prediction failure: ignore and consider |f->imdl instead.
+  // input->object is the prediction failure: ignore and consider |f->imdl instead.
+  Fact* f_imdl = (Fact *)f_imdl_;
+  Timestamp f_imdl_after = f_imdl->get_after();
+  Timestamp f_imdl_before = f_imdl->get_before();
+  // Use the timestamps in the template parameters, similar to PrimaryMDLController::abduce_imdl.
+  // This is to make it symmetric with the timestamp in the forward chaining requirement.
+  MDLController::get_imdl_template_timings(f_imdl->get_reference(0), f_imdl_after, f_imdl_before);
+  P<_Fact> consequent = new Fact(f_imdl->get_reference(0), f_imdl_after, f_imdl_before, f_imdl->get_cfd(), f_imdl->get_psln_thr());
   consequent->set_opposite();
 
+  vector<Input> discarded_f_mk_vals;
+  vector<Input> discarded_f_icsts;
+  vector<Code*> accepted_mk_vals;
+
   P<BindingMap> end_bm = new BindingMap();
-  P<_Fact> abstract_input = (_Fact *)end_bm->abstract_object(consequent, false);
+  {
+    // Call abstract_object only to update the binding map.
+    P<Code> unused = end_bm->abstract_object(consequent, false);
+  }
   r_code::list<Input>::const_iterator i;
   for (i = inputs_.begin(); i != inputs_.end();) { // filter out inputs irrelevant for the prediction.
 
-    if (i->input_->get_reference(0)->code(0).asOpcode() == Opcodes::Cmd) // no cmds as req lhs (because no bwd-operational); prefer: cmd->effect, effect->imdl.
+    if (i->input_->get_reference(0)->code(0).asOpcode() == Opcodes::Cmd)
+      // no cmds as req lhs (because no bwd-operational); prefer: cmd->effect, effect->imdl.
       i = inputs_.erase(i);
-    else if (!end_bm->intersect(i->bindings_) || // discard inputs that do not share values with the consequent.
-             i->input_->get_after() > consequent->get_after()) // discard inputs that started after the consequent started.
+    else if (i->input_->get_after() > consequent->get_after())
+      // discard inputs that started after the consequent started.
       i = inputs_.erase(i);
-    else
+    else if (!end_bm->intersect(i->bindings_)) {
+      // discard inputs that do not share values with the consequent.
+      if (i->input_->get_reference(0)->code(0).asOpcode() == Opcodes::MkVal &&
+          !_Mem::Get()->matches_axiom(i->input_->get_reference(0)))
+        // Save for below.
+        discarded_f_mk_vals.push_back(*i);
+      else if (i->input_->get_reference(0)->code(0).asOpcode() == Opcodes::ICst)
+        // Save for below.
+        discarded_f_icsts.push_back(*i);
+
+      i = inputs_.erase(i);
+    }
+    else {
+      if (i->input_->get_reference(0)->code(0).asOpcode() == Opcodes::MkVal &&
+          !_Mem::Get()->matches_axiom(i->input_->get_reference(0)))
+        // Save for below.
+        accepted_mk_vals.push_back(i->input_->get_reference(0));
+
       ++i;
+    }
+  }
+
+  // Only keep discarded mk.vals that share "attribute, value" with at least one accepted mk.val.
+  for (auto f_mk_val = discarded_f_mk_vals.begin(); f_mk_val != discarded_f_mk_vals.end();) {
+    bool match = false;
+    for (auto accepted = accepted_mk_vals.begin(); accepted != accepted_mk_vals.end(); ++accepted) {
+      // Skip the mk.val object. Start matching from the attribute.
+      if (_Fact::Match(f_mk_val->input_->get_reference(0), 0, MK_VAL_ATTR,
+                       *accepted, MK_VAL_ATTR, MK_VAL_ARITY)) {
+        match = true;
+        break;
+      }
+    }
+
+    if (match) {
+      // Restore as an accepted input.
+      inputs_.push_back(Input(*f_mk_val));
+      ++f_mk_val;
+    }
+    else
+      f_mk_val = discarded_f_mk_vals.erase(f_mk_val);
+  }
+
+  // Find discarded f_icsts which have a discarded mk.val (which shares an "attribute, value" with an accepted mk.val).
+  for (auto f_icst = discarded_f_icsts.begin(); f_icst != discarded_f_icsts.end(); ++f_icst) {
+    bool contains = false;
+    for (auto f_mk_val = discarded_f_mk_vals.begin(); f_mk_val != discarded_f_mk_vals.end(); ++f_mk_val) {
+      if (((ICST*)f_icst->input_->get_reference(0))->r_contains(f_mk_val->input_)) {
+        contains = true;
+        break;
+      }
+    }
+
+    if (contains)
+      // Restore as an accepted input.
+      inputs_.push_back(Input(*f_icst));
   }
 
   P<GuardBuilder> guard_builder;
@@ -855,7 +967,29 @@ void CTPX::reduce(r_exec::View *input) {
   _Fact *consequent = (_Fact *)input->object_; // counter-evidence for the premise.
 
   P<BindingMap> end_bm = new BindingMap();
-  P<_Fact> abstract_input = (_Fact *)end_bm->abstract_object(consequent, false);
+  {
+    // Call abstract_object only to update the binding map.
+    P<Code> unused = end_bm->abstract_object(consequent, false);
+  }
+
+  bool have_delta = false;
+  BindingMap bm_with_delta;
+  if (target_->get_reference(0)->code(0).asOpcode() == Opcodes::MkVal) {
+    // This is the same as the searched_for delta in find_guard_builder.
+    float32 delta = consequent->get_reference(0)->code(MK_VAL_VALUE).asFloat() -
+      target_->get_reference(0)->code(MK_VAL_VALUE).asFloat();
+    if (delta != 0) {
+      have_delta = true;
+      P<Code> delta_code(new LObject());
+      delta_code->code(0) = Atom::Float(delta);
+      bm_with_delta.init(delta_code, 0);
+    }
+  }
+
+  // Add an imdl to this set if the loop would discard it for not sharing values with
+  // the target or consequent, but it does share delta. 
+  set<_Fact*> only_intersects_delta_imdls;
+
   r_code::list<Input>::const_iterator i;
   for (i = inputs_.begin(); i != inputs_.end();) {
 
@@ -865,7 +999,10 @@ void CTPX::reduce(r_exec::View *input) {
       ICST *icst = (ICST*)i->input_->get_reference(0);
       for (uint32 j = 0; j < icst->components_.size(); ++j) {
         P<BindingMap> component_bm = new BindingMap();
-        P<_Fact> unused = (_Fact *)component_bm->abstract_object(icst->components_[j], false);
+        {
+          // Call abstract_object only to update the binding map.
+          P<Code> unused = component_bm->abstract_object(icst->components_[j], false);
+        }
         if (!(target_bindings_->intersect(component_bm) || end_bm->intersect(component_bm))) {
           icstIsOK = false;
           break;
@@ -879,18 +1016,35 @@ void CTPX::reduce(r_exec::View *input) {
         ++i;
       continue;
     }
-    if (!(target_bindings_->intersect(i->bindings_) || end_bm->intersect(i->bindings_)) || // discard inputs that do not share values with the target or consequent.
-      i->input_->get_after() >= consequent->get_after()) // discard inputs not younger than the consequent.
+
+    if (i->input_->get_after() >= consequent->get_after())
+      // Discard inputs not younger than the consequent.
       i = inputs_.erase(i);
+    else if (!(target_bindings_->intersect(i->bindings_) || end_bm->intersect(i->bindings_))) {
+      // Discard inputs that do not share values with the target or consequent.
+      // However, allow an imdl which has the delta value.
+      if (have_delta && i->input_->get_reference(0)->code(0).asOpcode() == Opcodes::IMdl &&
+          bm_with_delta.intersect(i->bindings_)) {
+        only_intersects_delta_imdls.insert(i->input_);
+        ++i;
+      }
+      else
+        i = inputs_.erase(i);
+    }
     else
       ++i;
   }
 
-  bool need_guard;
-  if (target_->get_reference(0)->code(0).asOpcode() == Opcodes::MkVal)
-    need_guard = target_->get_reference(0)->code(MK_VAL_VALUE).isFloat();
-  else
-    need_guard = false;
+  bool need_guard = false;
+  if (target_->get_reference(0)->code(0).asOpcode() == Opcodes::MkVal) {
+    Atom target_val = target_->get_reference(0)->code(MK_VAL_VALUE);
+    if (target_val.isFloat())
+      need_guard = true;
+    else if (target_val.getDescriptor() == Atom::I_PTR) {
+      if (hasUserDefinedOperators(target_->get_reference(0)->code(target_val.asIndex()).asOpcode()))
+        need_guard = true;
+    }
+  }
 
   auto period = duration_cast<microseconds>(Utils::GetTimestamp<Code>(consequent, FACT_AFTER) - Utils::GetTimestamp<Code>(target_, FACT_AFTER)); // sampling period.
   P<GuardBuilder> guard_builder;
@@ -911,7 +1065,10 @@ void CTPX::reduce(r_exec::View *input) {
     if (Utils::Synchronous(cause.input_->get_after(), target_->get_after())) // cause in sync with the premise: ignore.
       continue;
 
-    if (need_guard) {
+    // If the LHS cause is an imdl, assume that the default guard builder will be sufficient.
+    // However, if the cause is an imdl where a value is delta (see above), call find_guard_builder.
+    if (need_guard && (cause.input_->get_reference(0)->code(0).asOpcode() != Opcodes::IMdl ||
+          only_intersects_delta_imdls.find(cause.input_) != only_intersects_delta_imdls.end())) {
 
       if ((guard_builder = find_guard_builder(cause.input_, consequent, period)) == NULL)
         continue;
@@ -938,7 +1095,7 @@ GuardBuilder *CTPX::get_default_guard_builder(_Fact *cause, _Fact *consequent, m
 
   Code *cause_payload = cause->get_reference(0);
   uint16 opcode = cause_payload->code(0).asOpcode();
-  if (opcode == Opcodes::Cmd) {
+  if (opcode == Opcodes::Cmd || opcode == Opcodes::IMdl) {
 
     auto offset = duration_cast<microseconds>(consequent->get_after() - cause->get_after());
     auto cmd_duration = duration_cast<microseconds>(cause->get_before() - cause->get_after());
@@ -959,42 +1116,126 @@ GuardBuilder *CTPX::find_guard_builder(_Fact *cause, _Fact *consequent, microsec
   Code *cause_payload = cause->get_reference(0);
   uint16 opcode = cause_payload->code(0).asOpcode();
   if (opcode == Opcodes::Cmd) {
+    uint16 cmd_arg_set_index = cause_payload->code(CMD_ARGS).asIndex();
+    uint16 cmd_arg_count = cause_payload->code(cmd_arg_set_index).getAtomCount();
+
+    // Form 1
+    // Form 1A
+    // Build the expression (- q1 q0), copying the code structure at q1 and q0 and evaluate it.
+    auto result = OpContext::build_and_evaluate_expression(target_, consequent, Atom::Operator(Opcodes::Sub, 2));
+
+    //Check whether a valid result was returned.
+    int index = -1;
+    for (size_t i = 0; i < result.size(); ++i) {
+      if (result[i] != Atom::Nil()) {
+        index = i;
+        break;
+      }
+    }
+    // Match the result to the cause_payload.
+    if (index != -1) {
+      LocalObject searched_for;
+      uint16 extent_index = 0;
+      StructureValue::copy_structure(&searched_for, extent_index, &result[index], 0);
+
+      for (uint16 i = 1; i <= cmd_arg_count; ++i) {
+        Atom s = cause_payload->code(cmd_arg_set_index + i);
+        uint16 cmd_index = cmd_arg_set_index + i;
+        bool match = false;
+        if (s.getDescriptor() == Atom::I_PTR) {
+          cmd_index = s.asIndex();
+          match = _Fact::MatchStructure(cause_payload, cmd_index, 0, &searched_for, 0, s.getAtomCount());
+        }
+        else {
+          match = _Fact::Match(cause_payload, cmd_index, 0, &searched_for, 0, s.getAtomCount());
+        }
+        if (match) {
+          auto offset = duration_cast<microseconds>(Utils::GetTimestamp<Code>(cause, FACT_AFTER) - Utils::GetTimestamp<Code>(target_, FACT_AFTER));
+          return new ACGuardBuilder(period, period - offset, cmd_arg_set_index + i);
+        }
+      }
+    }
+
+    // Form 1B
+    // Build the expression (/ q1 q0), copying the code structure at q1 and q0 and evaluate it.
+    result = OpContext::build_and_evaluate_expression(target_, consequent, Atom::Operator(Opcodes::Div, 2));
+
+    //Check whether a valid result was returned.
+    index = -1;
+    for (int i = 0; i < result.size(); ++i) {
+      if (result[i] != Atom::Nil()) {
+        index = i;
+        break;
+      }
+    }
+
+    // Match the result to the cause_payload.
+    if (index != -1) {
+      LocalObject searched_for;
+      uint16 extent_index = 0;
+      StructureValue::copy_structure(&searched_for, extent_index, &result[index], 0);
+      for (uint16 i = 1; i <= cmd_arg_count; ++i) {
+        Atom s = cause_payload->code(cmd_arg_set_index + i);
+        uint16 cmd_index = cmd_arg_set_index + i;
+        bool match = false;
+        if (s.getDescriptor() == Atom::I_PTR) {
+          cmd_index = s.asIndex();
+          match = _Fact::MatchStructure(cause_payload, cmd_index, 0, &searched_for, 0, s.getAtomCount());
+        }
+        else {
+          match = _Fact::Match(cause_payload, cmd_index, 0, &searched_for, 0, s.getAtomCount());
+        }
+        if (match) {
+          auto offset = duration_cast<microseconds>(Utils::GetTimestamp<Code>(cause, FACT_AFTER) - Utils::GetTimestamp<Code>(target_, FACT_AFTER));
+          return new MCGuardBuilder(period, period - offset, cmd_arg_set_index + i);
+        }
+      }
+    }
+  }
+  else if (opcode == Opcodes::IMdl) {
     // Form 1
     float32 q0 = target_->get_reference(0)->code(MK_VAL_VALUE).asFloat();
     float32 q1 = consequent->get_reference(0)->code(MK_VAL_VALUE).asFloat();
 
     // Form 1A
     float32 searched_for = q1 - q0;
-    uint16 cmd_arg_set_index = cause_payload->code(CMD_ARGS).asIndex();
-    uint16 cmd_arg_count = cause_payload->code(cmd_arg_set_index).getAtomCount();
-    for (uint16 i = 1; i <= cmd_arg_count; ++i) {
+    Code* imdl = cause->get_reference(0);
+    uint16 imdl_exposed_args_index = imdl->code(I_HLP_EXPOSED_ARGS).asIndex();
+    uint16 imdl_exposed_args_count = imdl->code(imdl_exposed_args_index).getAtomCount();
 
-      Atom s = cause_payload->code(cmd_arg_set_index + i);
+    for (uint16 i = 1; i <= imdl_exposed_args_count; ++i) {
+
+      Atom s = imdl->code(imdl_exposed_args_index + i);
       if (!s.isFloat())
         continue;
       float32 _s = s.asFloat();
       if (Utils::Equal(_s, searched_for)) {
         auto offset = duration_cast<microseconds>(Utils::GetTimestamp<Code>(cause, FACT_AFTER) - Utils::GetTimestamp<Code>(target_, FACT_AFTER));
-        return new ACGuardBuilder(period, period - offset, cmd_arg_set_index + i);
+        // Use the exposed args index in what will be the abstracted imdl.
+        return new ACGuardBuilder(period, period - offset, BindingMap::get_abstracted_ihlp_exposed_args_index(imdl) + i);
       }
     }
 
     if (q0 != 0) {
       // Form 1B
       searched_for = q1 / q0;
-      for (uint16 i = cmd_arg_set_index + 1; i <= cmd_arg_count; ++i) {
+      for (uint16 i = imdl_exposed_args_index + 1; i <= imdl_exposed_args_count; ++i) {
 
-        Atom s = cause_payload->code(i);
+        Atom s = imdl->code(i);
         if (!s.isFloat())
           continue;
         float32 _s = s.asFloat();
         if (Utils::Equal(_s, searched_for)) {
           auto offset = duration_cast<microseconds>(Utils::GetTimestamp<Code>(cause, FACT_AFTER) - Utils::GetTimestamp<Code>(target_, FACT_AFTER));
-          return new MCGuardBuilder(period, period - offset, i);
+          // Use the exposed args index in what will be the abstracted imdl.
+          return new MCGuardBuilder(period, period - offset,
+            (i - imdl_exposed_args_index) + BindingMap::get_abstracted_ihlp_exposed_args_index(imdl));
         }
       }
     }
-  } else if (opcode == Opcodes::MkVal) {
+  }
+  
+  else if (opcode == Opcodes::MkVal) {
     // Forms 2 and 3
     Atom s = cause_payload->code(MK_VAL_VALUE);
     if (s.isFloat()) {
@@ -1025,6 +1266,9 @@ GuardBuilder *CTPX::find_guard_builder(_Fact *cause, _Fact *consequent, microsec
 
   return NULL;
 }
+
+
+
 
 // m0:[premise.value premise.after premise.before][cause->consequent].
 // m1:[icst->imdl m0[...][...]] with icst containing the premise.
@@ -1072,6 +1316,8 @@ bool CTPX::build_requirement(HLPBindingMap *bm, Code *m0, microseconds period) {
   _Fact* f_icst = results[0].f_icst;
   _Fact* premise_pattern = results[0].component_pattern;
   P<Fact> f_im0 = bm->build_f_ihlp(m0, Opcodes::IMdl, false);
+  // build_f_ihlp can leave some variables pointing into bm, but abstract_object needs everything valuated.
+  f_im0->set_reference(0, bm->bind_pattern(f_im0->get_reference(0)));
   Utils::SetTimestamp<Code>(f_im0, FACT_AFTER, f_icst->get_after());
   Utils::SetTimestamp<Code>(f_im0, FACT_BEFORE, f_icst->get_before());
 

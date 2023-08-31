@@ -13,10 +13,14 @@ Prerequisites
 Following are the detailed steps for each platform to install the prerequisites.
 
 ## Windows
-To install Visual Studio, download and install Visual Studio Community Edition from
-https://visualstudio.microsoft.com/vs/community .
+To install Visual Studio, download and install Visual Studio Community Edition 2019 from
+https://visualstudio.microsoft.com/vs/older-downloads .
 In the installer, under "Desktop development with C++", check "Windows 10 SDK (10.0.17134.0)" and
   "MSVC v141 - VS 2017 C++ build tools".
+  
+In case you have Visual Studio Community Edition 2022 installed, "Windows 10 SDK (10.0.17134.0)" will
+  not be listed as an option in the installer.
+Instead, you can download  "Windows 10 SDK (10.0.17134.12)" from https://developer.microsoft.com/windows/downloads/sdk-archive/ .
 
 To install Git, download and install GitHub for Desktop from https://desktop.github.com .
 
@@ -27,8 +31,8 @@ It should be a recursive clone (which is the default).
 Build
 =====
 Launch Visual Studio and open the project `AERA.sln` from the cloned repository. E.g.:
-  `C:\Users\Alice\Documents\GitHub\replicode\AERA.sln` .
-  If a dialog box appears asking to retarget the Windows version, click cancel. 
+`C:\Users\Alice\Documents\GitHub\replicode\AERA.sln` .
+If a dialog box appears asking to retarget the Windows version, click cancel. 
 
 ## `WITH_DETAIL_OID`
 
@@ -39,6 +43,10 @@ the line is:
     #define WITH_DETAIL_OID // Enable get_detail_oid() in every object.
 
 ## Compile
+
+In the Solution Configurations drop-down, make sure you select Release (unless you plan to debug AERA).
+
+In the Solution Options drop-down, make sure you select Win32.
 
 On the Build menu, click Build Solution. (Don't worry about all the compiler warnings.)
 

@@ -154,7 +154,7 @@
   settings.xml: Need to set tpx_time_horizon?
 * DONE. Is GTPX invoked when drive goal succeeds?
   ANSWER: Yes, but does nothing. GTPX::reduce needs inputs, but AutoFocusController::reduce:392
-    doesn't call dispatch becuase std.replicode:166 pass_through is true.
+    doesn't call dispatch because std.replicode:166 pass_through is true.
     Setting pass_through false: No auto focus, no learned models, no AutoFocus.goals. Still no dispatch.
 * DONE. Review/merge fix for getting fwd_after_index https://github.com/IIIM-IS/replicode/pull/63
 * DONE. Review/merge fix for accessing controllers array https://github.com/IIIM-IS/replicode/pull/64
@@ -905,37 +905,236 @@ Simulator
   * DONE. Show "prediction disabled" for non-simulated anti-requirements  https://github.com/IIIM-IS/AERA_Visualizer/issues/40
   * DONE. Review/merge pull request to add a requirement monitor when abducing goal imdl from a cst. https://github.com/IIIM-IS/AERA/pull/226
 
-next meeting
-* Make interim AERA release diagnostic_mode_v0_2.
-* Make Replicode example of CLCC paper Figure 8, simplified to hand-grab-sphere.
+2022-07-21
+* DONE. Make interim AERA release diagnostic_mode_v0_2.
+* DONE. Make Replicode example of CLCC paper Figure 8, simplified to hand-grab-sphere.
+
+2022-08-04
+* DONE. Add prerequisite states to CLCC paper Figure 8 to match those in hand-grab-sphere.
+
+2022-08-18
+* DONE. Visualizer: Option to show all inputs in the commited simulation branch.
+* hand-grab-sphere
+  * DONE. Rename the actions after PTPX from "babbling" to "experimenting".
+
+2022-08-25
+* hand-grab-sphere
+  * Learn re-use model.
+    * DONE. Merge pull request to fix the imdl timing problem in PR #166 https://github.com/IIIM-IS/AERA/pull/227
+    * DONE. Merge pull request for CTPX to use the default guard builder for a re-use model https://github.com/IIIM-IS/AERA/pull/228
+
+2022-09-01
+* DONE. Make pull request to allow [] for empty set not at the end of a line (replace |[]) https://github.com/IIIM-IS/AERA/pull/229
+* hand-grab-sphere
+  * Make AERA take experimenting actions to test candidate PTPX models (instead of explicit babbling).
+    * DONE. Demonstrate output of reason for failure to achieve explicit goal.
+
+2022-09-29
+* DONE. Demonstrate not recreating the same deleted model.
+* DONE. Merge pull request to fix bug in unpack_hlp https://github.com/IIIM-IS/AERA/pull/230
+* DONE. Merge pull request to monitor goals even if a prediction was made https://github.com/IIIM-IS/AERA/pull/231
+
+2022-10-13
+* DONE: Merge pull request to fix bug for program deep-structure pattern matching https://github.com/IIIM-IS/AERA/pull/232
+* DONE. Merge pull request to inject mk.new for created models https://github.com/IIIM-IS/AERA/pull/233
+
+2022-11-03
+* Webots
+  * DONE. Continue physics while waiting for command
+
+2022-11-10
+* Webots
+  * DONE. Get c and s position from the environment [Jeff]
+  * DONE. Fix bug: Not finishing when AERA is in Debug configuration [Jeff]
+  * DONE. Does AERA need to send the "start" command to Webots? Yes. Make ready command just accept/log a string.
+
+2022-11-17
+* Webots
+  * DONE. Get holding (s, c, []) from the environment [Jeff]
+  * DONE. Use protobuf (need to compile into Webots) [Leonard]
+
+2022-12-01
+* DONE. Fix bug to rename "Visulizer" https://github.com/IIIM-IS/AERA_Visualizer/issues/30
+* DONE. Review/merge pull request for don't fail evaluation if assignment guard is already bound. https://github.com/IIIM-IS/AERA/pull/236
+
+2022-12-09
+* DONE. Use C++ override keyword https://github.com/IIIM-IS/AERA/issues/189
+* DONE. Review Chloe's pull request for Zoom To button https://github.com/IIIM-IS/AERA_Visualizer/pull/43
+
+2022-12-15
+* DONE. Review pull request to allow shared template timing variables https://github.com/IIIM-IS/AERA/pull/240
+* DONE. Close Arash's pull request for reuse models in CTPX (now not needed) https://github.com/IIIM-IS/AERA/pull/238
+
+2023-01-06
+* DONE. Update copyright headers for 2023.
+* Webots
+  * DONE. Put code in IIIM-IS/AERA_Webots [Leonard]
+  * DONE. Make pull request for Webots controller to start example. [Jeff] https://github.com/IIIM-IS/AERA_Webots/pull/1
+
+2023-01-12
+* Causal process terminology
+  * Is using Lisp more clear to show inference process?
+  * If a goal state is not the current state, can that be called a "problem"? Attention to actions that "solve the problem"?
+
+2023-01-20
+* hand-grab-sphere
+  * DONE. Represent sphere position without direct I/O input.
+    * (mk.val h rfid s) when hand is at the position of s.
+    * Anti-requirement model for failure to position s when s is not reachable.
+    * Subgoal for (mk.val s reachable true). Can be achieved by "scanning" the hand and detecting rfid. ("Mandatory" solution.)
+    * When (mk.val s reachable true), the anti-requirement model is "counterattacked". (Anti requirement on the anti-requirement)
+    * Inject assumption (mk.val s inferred_position 0) from hand position and detected rfid of s.
+    * The "counterattack" model remembers the inferred position.
+    * Continue to inject the drive. The hand releases c. Artifically move the hand away from s.
+    * The rfid of s is not detected, but the "counterattack" model injects the inferred position of s.
+    * No "centralized" attention module.
+
+2023-01-27
+* GTPX
+  * Not used for mk.val https://github.com/IIIM-IS/AERA/blob/8a0a88275d0be8c0b2da12e55e3c16052f379d72/r_exec/pattern_extractor.cpp#L583
 * hand-grab-sphere
   * Represent sphere position without direct I/O input.
-  * Make AERA take actions to test candidate PTPX models (instead of explicit babbling).
+    * DONE. Review/merge pull request for multiple matches in retrieve_imdl_fwd https://github.com/IIIM-IS/AERA/pull/243
+
+2023-02-03
+* DONE. Make issue for PTPX makes an anti-requirement which uses the wrong variable from the cst https://github.com/IIIM-IS/AERA/issues/245
+* hand-grab-sphere
+  * Represent sphere position without direct I/O input.
+    * DONE. Make pull request to return NO_REQUIREMENT if only strong requirements but none match https://github.com/IIIM-IS/AERA/pull/244
+
+2023-02-24
+* DONE. Review/merge pull request to solve issue #245 for PTPX makes an anti-requirement which uses the wrong variable from the cst https://github.com/IIIM-IS/AERA/pull/246
+* GTPX
+  * Try making a goal of icst.
+    * DONE. Try adding inputs_ for GTPX.
+* hand-grab-sphere
+  * Represent sphere position without direct I/O input.
+    * DONE. Review/merge pull request to return NO_REQUIREMENT if only strong requirements but none match https://github.com/IIIM-IS/AERA/pull/244
+
+2023-03-03
+* DONE. Try interval syntax "a-floating-point-number|a-floating-point-number" and "a-timestamp|a-timestamp"
+  RESULT: Not implemented.
+* DONE. Discuss intermittent Visualizer crash: Root cause not found.
+* hand-grab-sphere
+  * DONE. Try moves taking 1000ms to complete. (More realistic, test multi-frame action, compatible with Webots)
+    * (Needed to hack PASTController to allow repeated values since the command.)
+
+2023-03-16
+* hand-grab-sphere
+  * Moves taking 1s to complete.
+    * CTPX: Need to extend time span between command and effect.
+      * DONE. Try injecting robot signals into a group with longer update period.
+        RESULT. It works. The longer period is used for CTPX.
+
+2023-03-24
+* hand-grab-sphere
+  * DONE. Try injecting the command efferent copy at the time of completion but with the timestamp of original command.
+    hand-grab-sphere-learn works when injecting efferent copy at (+ After 99ms) .
+* Webots
+  * DONE. Get hand-grab-sphere-learn working with Leonard's interface (and a few hacks)
+
+2023-03-31
+* Webots
+  * DONE. Babble move from 0 learns different models. Check if they make good predictions. [Jeff]
+    * DONE: It works. Review/merge pull request to avoid duplicate predictions https://github.com/IIIM-IS/AERA/pull/248
+  * DONE. Incorporate Leonard's latest AERA_Webots changes.
+
+2023-04-07
+* Webots
+  * DONE. Review/merge pull request for min Z value, etc. [Jeff] https://github.com/IIIM-IS/AERA_Webots/pull/2
+  * DONE. Review/merge pull request for one step so that Webots initial values are correct [Jeff] https://github.com/IIIM-IS/AERA_Webots/pull/3
+
+2023-04-21
+* DONE. In _Mem::run_in_diagnostic_time, factor out code in the main loop as DiagnosticTimeState::step().
+
+2023-04-28
+* DONE. Review/merge pull request to implement time interval proposal https://github.com/IIIM-IS/AERA/issues/137  https://github.com/IIIM-IS/AERA/pull/250
+  * Solves bug for using the narrowed time interval values in the imdl https://github.com/IIIM-IS/AERA/issues/251
+* Webots
+  * DONE. Try to increase friction on gripper and objects. [Leonard] https://github.com/IIIM-IS/AERA_Webots/pull/4
+  * DONE. Pull request to make Webots aera_us match the AERA fact times. https://github.com/IIIM-IS/AERA_Webots/pull/6
+
+2023-05-08
+* Webots
+  * DONE. Link to Debug version of Protobuf library. [Leonard] https://github.com/IIIM-IS/AERA/pull/252
+
+2023-05-19
+* DONE. Make temporary fix for Visualizer crash. If enabled, skip deleting memory when resizing a vector. Doesn't crash, but leaks memory.
+* DONE. Update AERA to make it easier to statically link in AERA_Visualizer.
+* Webots
+  * DONE. Make pull request to wait until 65 ms to execute command and wait for it to complete. https://github.com/IIIM-IS/AERA_Webots/pull/9
+
+2023-05-25
+* DONE. Merge Leonard's AERA_Protobuf submodule update https://github.com/IIIM-IS/AERA/pull/256
+* DONE. Make hand-grab-sphere work with (vec [25 0 0]) .
+* Webots
+
+2023-06-09
+* DONE. Make pull request for bound objects with sub-structures https://github.com/IIIM-IS/AERA/pull/257
+* Webots
+  * DONE. Update AERA_Webots to use the AERA_Protobuf submodule https://github.com/IIIM-IS/AERA_Webots/pull/10
+  * DONE. Put code in usr_operators in a namespace. Implement vec3 div. (No conflict with Windows div.)
+  * DONE (side effect). Reset the TCP connection when resetting the Webots simulation
+  * Make CTPX work with vec3 for the move model DeltaP.
+    * DONE. Add temporary special case in CTPX for vec3. [Jeff]
+
+2023-07-06
+* DONE. Merge pull request to fix out-of-bounds error (seen by Chloe) https://github.com/IIIM-IS/AERA/pull/261
+* Webots
+  * DONE. Make CTPX work with vec3 for the move model DeltaP.
+
+2023-07-13
+* DONE. Merge request to fix bug in abstract_f_ihlp (for Arash) https://github.com/IIIM-IS/AERA/pull/262
+
+2023-07-27
+* DONE. Merge request for PTPX to accept objects with same "attribute, value" https://github.com/IIIM-IS/AERA/pull/263
+
+2023-08-10
+* DONE. Look for the AERA code for removing a model for disuse.
+  RESULT: Model view is "forever". I think it is not implemented. Couldn't find this described in the Replicode Tech Report.
+* Webots
+  * DONE. Try camera [Leonard]
+
+2023-08-18
+* DONE. Update "Perceptual Explanation" slide for robot example.
+* DONE. Merge Leonard's pull request for decoding Atoms in Visual Studio https://github.com/IIIM-IS/AERA/pull/268
+* DONE. Merge Leonard's pull request for generalized operators https://github.com/IIIM-IS/AERA/pull/266
+* DONE. Merge Leonard's pull request for multi-dimensional marker values in TCP (Webots) https://github.com/IIIM-IS/AERA/pull/267
+
+2023-08-25
+* DONE. Merge request to fix bug initializing CST binding map https://github.com/IIIM-IS/AERA/pull/260
+* DONE. Merge request to remove unneded TemplateTimingsUpdater https://github.com/IIIM-IS/AERA/pull/269
+* Discuss: Simulation forward chaining vs. argumentation
+
+next meeting
+* Webots
+  * Webots (occasionally) sends data for rotation which confuses the current example. [Leonard]
+  * This should either include the Eigen library as a submodule, or update the README with instructions to install it. [Leonard]
+  * Put a tray at the goal position
+  * Set position of boxes on initial load to the correct position
+  * Generalize CTPX for all strucured types (vec2, vec3, vec [], etc.) [Leonard]
+  * Align aera_us with AERA time.
+  * Use setup command for automatic discovery of AERA objects and commands
+  * Get command efferent copy from Webots (move limit to +/- 20) [Maybe in the setup message or command reply. Need more discussion]
+  * Try Webots streaming to the Visualize [Chloe]
+* hand-grab-sphere
+  * Represent sphere position without direct I/O input.
+  * Make AERA take experimenting actions to test candidate PTPX models (instead of seed commands).
     * Still need to allow multiple strong requirements in retrieve_imdl.
 
 TODO
-* Simple example for CKCC paper.
-* Generality
-  * Make issue to propose numbers with ranges. Maybe more general: Range of numbers, range of durations, range of timestamps, combos?
+* Change (success) to refer to the prediction mk.rdx instead of the prediction. (Affects other code.)
+* Make a mk.rdx for (fact (pred (fact (imdl ...)))). (May affect other code that expects the other kind of prediction.)
 * PTPX: Learned cst may only have icsts. But using a cst for later model-building requires a non-icst fact. Should icst->contains be recursive? (Need limit.) Or always include a fact in new_cst?
 * Pong
   * Add paddle. Make goal for the ball to be at a position which requires moving the paddle to bounce it.
   * Remove cst_ball_position, etc. and learn them.
   * Learn the exception "bounce" model.
-* Make hand-grab-sphere example learn the models.
-  * A pgm to match a learned model and inject a new model which uses it.
 * Try commenting out PTPX::reduce:666 if (i->input_ == Opcodes::Cmd)
-* Try pass_through==false. Do CTPX and PTPX still work?
-* When a failed model is in the secondary group and the pattern extractor learns a model from new inputs, does it check if it's the same as the failed model?
-* For an anti-goal can AERA check if it doesn't violate any "current" drive? Need a list of "current" drives?
-* Make a mk.rdx for (fact (pred (fact (imdl ...)))). (May affect other code that expects the other kind of prediction.)
-* Change (success) to refer to the prediction mk.rdx instead of the prediction. (Affects other code.)
 * Visualizer: Option to position simulation objects by predicted time vs. created time.
 * Visualizer: Add an item for prediction reduction, initially hidden.
 * Visualizer: Show the time job queue sorted by time.
 * If min_sim_time_horizon > 0, how is the behavior different?
-* In babbling, issue a goal for a position, an "unrelated" move command, and move the position there. Is GTPX invoked?
-* Treat move commands at the same time step as impulses and have them accumulate?
 * Issue #2: Try to reproduce.
 * Issue #25: Reproduce running in real-time, and see if it happens in diagnostic time.
 
@@ -951,11 +1150,11 @@ Y Y _ _ Non-simulated icst from facts/icsts
 Y Y _ _ Non-simulated prediction of imdl from weak requirement model
 Y _ _ _ Rating of weak requirement models
 Y Y _ _ Testing and re-activation of models and weak requirement models in the secondary group
-_ _ _ _ Use of deleted models to prevent re-creating them
+Y _ _ _ Use of deleted models to prevent re-creating them
 Y Y _ _ Non-simulated prediction of fact from model
 Y _ _ _ Non-simulated cmd from non-simulated goal RHS
 _ _ _ _ Auto-focus based on active predictions and goals (not pass-through)
-_ _ _ _ Views/groups and saliency propagation
+Y _ _ _ Views/groups and saliency propagation
 Y _ _ _ Simulated prediction of icst from facts/icsts
 Y _ _ _ Simulated prediction of imdl from weak requirement model
 Y _ _ _ Simulated prediction of fact from model

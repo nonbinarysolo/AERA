@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ Copyright (c) 2021 Leonard Eberding
 //_/_/ http://www.iiim.is
 //_/_/
@@ -64,7 +64,6 @@ namespace tcp_io_device {
     outgoing_queue_ = send_queue;
     incoming_queue_ = receive_queue;
     msg_length_buf_size_ = msg_length_buf_size;
-    FD_ZERO(&tcp_client_fd_set_);
     state_ = NOT_STARTED;
   }
 
@@ -148,7 +147,7 @@ namespace tcp_io_device {
     }
 
 
-    std::cout << "> INFO: Accepting client socket" << std::endl;
+    std::cout << "> INFO: Waiting to accept client socket on port " << port << std::endl;
     // Accept a client socket
     tcp_client_socket_ = ::accept(listen_socket, NULL, NULL);
     if (tcp_client_socket_ == INVALID_SOCKET) {
@@ -160,9 +159,6 @@ namespace tcp_io_device {
 
     // No longer need server listen socket
     closesocket(listen_socket);
-
-    // Create a FD_SET to check for new messages in the backgroundHandler.
-    FD_SET(tcp_client_socket_, &tcp_client_fd_set_);
 
 
     std::cout << "> INFO: TCP connection successfully established" << std::endl;
@@ -199,29 +195,35 @@ namespace tcp_io_device {
         }
         msg = std::move(outgoing_queue_->dequeue());
       }
-      // Check if new data is on the TCP connection to receive
-      timeval tv{ 0, 100000 };
-      int rc = 0;
-      FD_ZERO(&tcp_client_fd_set_);
-      FD_SET(tcp_client_socket_, &tcp_client_fd_set_);
-      rc = ::select(0, &tcp_client_fd_set_, NULL, NULL, &tv);
-      if (rc == 0) {
-        // No messages on the socket, continue the loop.
-        continue;
-      }
-      if (rc == SOCKET_ERROR) {
-        // Something went wrong when receiving the message, break the handler, end the thread.
-        std::cout << "select() == SOCKET_ERROR error: " << WSAGetLastError() << std::endl;
-        break;
-      }
-      auto in_msg = receiveMessage();
-      if (!in_msg) {
-        // Something went wrong when receiving the message, break the handler, end the thread.
-        break;
-      }
 
-      // Add it to the queue, let the main thread handle them
-      incoming_queue_->enqueue(std::move(in_msg));
+      // Yield to other threads while waiting for input.
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      bool got_error = false;
+      while (true) {
+        // Check if new data is on the TCP connection to receive
+        int ready = receiveIsReady(tcp_client_socket_);
+        if (ready == 0) {
+          // No messages on the socket, continue with the handler main loop.
+          break;
+        }
+        else if (ready < 0) {
+          // Something went wrong when receiving the message, break the handler, end the thread.
+          std::cout << "select() == SOCKET_ERROR error: " << WSAGetLastError() << std::endl;
+          got_error = true;
+          break;
+        }
+        auto in_msg = receiveMessage();
+        if (!in_msg) {
+          // Something went wrong when receiving the message, break the handler, end the thread.
+          got_error = true;
+          break;
+        }
+
+        // Add it to the queue, let the main thread handle them
+        incoming_queue_->enqueue(std::move(in_msg));
+      }
+      if (got_error)
+        break;
     }
     // Clear all entries of the queues before shutting down.
     incoming_queue_->clear();
@@ -248,10 +250,11 @@ namespace tcp_io_device {
     uint64_t len_res = 0;
 
     // First read the length of the message to expect (8 byte uint64_t)
-    std::string tcp_msg_len_recv_buf_;
+    std::string tcp_msg_len_recv_buf;
+    tcp_msg_len_recv_buf.reserve(msg_length_buf_size_);
     // To ensure split message is read correctly
     while (len_res < msg_length_buf_size_) {
-      received_bytes = recv(tcp_client_socket_, &(tcp_msg_len_recv_buf_[len_res]), msg_length_buf_size_ - len_res, 0);
+      received_bytes = recv(tcp_client_socket_, &(tcp_msg_len_recv_buf[len_res]), msg_length_buf_size_ - len_res, 0);
       if (received_bytes > 0) {
         // All good
         len_res += received_bytes;
@@ -276,7 +279,7 @@ namespace tcp_io_device {
     for (int i = msg_length_buf_size_ - 1; i >= 0; --i)
     {
       msg_len <<= 8;
-      msg_len |= (unsigned char)tcp_msg_len_recv_buf_[i];
+      msg_len |= (unsigned char)tcp_msg_len_recv_buf[i];
     }
 
     // Reset read bytes and total read bytes to 0
@@ -307,7 +310,7 @@ namespace tcp_io_device {
       return NULL;
     }
 
-    delete buf;
+    delete[] buf;
 
     return msg;
   }
@@ -336,6 +339,25 @@ namespace tcp_io_device {
     }
 
     return i_send_result;
+  }
+
+  int TCPConnection::receiveIsReady(SOCKET fd)
+  {
+    timeval tv{ 0, 0 };
+    int rc = 0;
+    FD_SET tcp_client_fd_set;
+    FD_ZERO(&tcp_client_fd_set);
+    FD_SET(fd, &tcp_client_fd_set);
+    rc = ::select(fd + 1, &tcp_client_fd_set, NULL, NULL, &tv);
+    if (rc == 0) {
+      // No messages on the socket.
+      return 0;
+    }
+    else if (rc == SOCKET_ERROR) {
+      return -1;
+    }
+
+    return 1;
   }
 
 } // namespace tcp_io_device

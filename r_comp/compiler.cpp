@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -1318,7 +1318,7 @@ bool Compiler::timestamp_s_ms_us(int64 &ts) {
   }
 
   bool negative = match_symbol("-", false);
-  int64 s;
+  uint64 s;
   *in_stream_ >> std::dec >> s;
   if (in_stream_->fail() || in_stream_->eof()) {
     in_stream_->clear();
@@ -1331,7 +1331,7 @@ bool Compiler::timestamp_s_ms_us(int64 &ts) {
     return false;
   }
 
-  int64 ms;
+  uint64 ms;
   *in_stream_ >> std::dec >> ms;
   if (in_stream_->fail() || in_stream_->eof()) {
     in_stream_->clear();
@@ -1344,7 +1344,7 @@ bool Compiler::timestamp_s_ms_us(int64 &ts) {
     return false;
   }
 
-  int64 us;
+  uint64 us;
   *in_stream_ >> std::dec >> us;
   if (in_stream_->fail() || in_stream_->eof()) {
     in_stream_->clear();
@@ -2412,7 +2412,9 @@ bool Compiler::read_nil(uint16 write_index, uint16 &extent_index, bool write) {
 bool Compiler::read_nil_set(uint16 write_index, uint16 &extent_index, bool write) {
 
   std::streampos i = in_stream_->tellg();
-  if (match_symbol("|[]", false)) {
+  if (match_symbol("|[]", false) ||
+      // Treat [] as an empty set if it is not at the end of a line.
+      (match_symbol("[]", false) && in_stream_->peek() >= 32)) {
 
     if (write) {
 

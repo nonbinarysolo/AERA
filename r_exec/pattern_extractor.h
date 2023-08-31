@@ -3,9 +3,10 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2023 Leonard M. Eberding
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -253,7 +254,8 @@ protected:
   _Fact *make_f_icst(_Fact *component, _Fact*& component_pattern, P<r_code::Code> &new_cst);
   r_code::Code *build_cst(const std::vector<Component> &components, BindingMap *bm, _Fact *main_component);
 
-  r_code::Code *build_mdl_head(HLPBindingMap *bm, uint16 tpl_arg_count, _Fact *lhs, _Fact *rhs, uint16 &write_index, bool allow_shared_timing_vars = true);
+  static r_code::Code *build_mdl_head(HLPBindingMap *bm, uint16 tpl_arg_count, _Fact *lhs, _Fact *rhs, uint16 &write_index, bool allow_shared_timing_vars = true);
+  static r_code::Code* build_mdl_head_from_abstract(uint16 tpl_arg_count, r_code::Code* lhs, r_code::Code* rhs, uint16& write_index);
   void build_mdl_tail(r_code::Code *mdl, uint16 write_index);
 
   void inject_hlps() const;
@@ -266,7 +268,7 @@ protected:
 public:
   virtual ~_TPX();
 
-  void debug(View *input) {};
+  void debug(View* /* input */) {};
 };
 
 // Pattern extractor targeted at goal successes.
@@ -284,14 +286,14 @@ private:
   bool build_mdl(_Fact *cause, _Fact *consequent, GuardBuilder *guard_builder, std::chrono::microseconds period);
   bool build_mdl(_Fact *f_icst, _Fact *cause_pattern, _Fact *consequent, GuardBuilder *guard_builder, std::chrono::microseconds period, r_code::Code *new_cst);
 
-  std::string get_header() const;
+  std::string get_header() const override;
 public:
   GTPX(AutoFocusController *auto_focus, _Fact *target, _Fact *pattern, BindingMap *bindings, Fact *f_imdl);
   ~GTPX();
 
-  bool take_input(View *input, _Fact *abstracted_input, BindingMap *bm);
-  void signal(View *input) const;
-  void ack_pred_success(_Fact *predicted_f);
+  bool take_input(View *input, _Fact *abstracted_input, BindingMap *bm) override;
+  void signal(View *input) const override;
+  void ack_pred_success(_Fact *predicted_f) override;
   void reduce(View *input); // input is v->f->success(target,input) or v->|f->success(target,input).
 };
 
@@ -308,12 +310,12 @@ private:
   bool build_mdl(_Fact *cause, _Fact *consequent, GuardBuilder *guard_builder, std::chrono::microseconds period);
   bool build_mdl(_Fact *f_icst, _Fact *cause_pattern, _Fact *consequent, GuardBuilder *guard_builder, std::chrono::microseconds period, r_code::Code *new_cst);
 
-  std::string get_header() const;
+  std::string get_header() const override;
 public:
   PTPX(AutoFocusController *auto_focus, _Fact *target, _Fact *pattern, BindingMap *bindings, Fact *f_imdl);
   ~PTPX();
 
-  void signal(View *input) const;
+  void signal(View *input) const override;
   void reduce(View *input); // input is v->f->success(target,input) or v->|f->success(target,input).
 };
 
@@ -339,7 +341,7 @@ private:
 
   bool build_requirement(HLPBindingMap *bm, r_code::Code *m0, std::chrono::microseconds period);
 
-  std::string get_header() const;
+  std::string get_header() const override;
 public:
   CTPX(AutoFocusController *auto_focus, View *premise);
   ~CTPX();

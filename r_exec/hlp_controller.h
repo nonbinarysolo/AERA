@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -177,6 +177,13 @@ protected:
   MatchResult check_evidences(_Fact *target, _Fact *&evidence); // evidence with the match (positive or negative), get_absentee(target) otherwise.
   MatchResult check_predicted_evidences(_Fact *target, _Fact *&evidence); // evidence with the match (positive or negative), NULL otherwise.
 
+  /**
+   * For each output group, make a NotificationView and inject into the group.
+   * \param marker The origin for the NotificationView.
+   * \param marker The marker for the NotificationView.
+   */
+  void inject_notification_into_out_groups(r_code::Code* origin, r_code::Code* marker) const;
+
   bool has_tpl_args_;
   uint32 ref_count_; // used to detect _Object::refCount_ dropping down to 1 for hlp with tpl args.
   bool is_orphan(); // true when there are tpl args and no requirements: the controller cannot execute anymore.
@@ -191,9 +198,9 @@ protected:
 public:
   virtual ~HLPController();
 
-  void invalidate();
+  void invalidate() override;
 
-  r_code::Code *get_core_object() const { return get_object(); } // cst or mdl.
+  r_code::Code *get_core_object() const override { return get_object(); } // cst or mdl.
   r_code::Code *get_unpacked_object() const { // the unpacked version of the core object.
 
     r_code::Code *core_object = get_core_object();

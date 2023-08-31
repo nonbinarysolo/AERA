@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -153,17 +153,16 @@ class Success;
 
 class r_exec_dll _Fact :
   public LObject {
-private:
-  static bool MatchAtom(Atom lhs, Atom rhs);
-  static bool MatchStructure(const r_code::Code *lhs, uint16 lhs_base_index, uint16 lhs_index, const r_code::Code *rhs, uint16 rhs_index, bool same_binding_state);
-  static bool Match(const r_code::Code *lhs, uint16 lhs_base_index, uint16 lhs_index, const r_code::Code *rhs, uint16 rhs_index, uint16 lhs_arity, bool same_binding_state);
-  static bool CounterEvidence(const r_code::Code *lhs, const r_code::Code *rhs);
 protected:
   _Fact();
   _Fact(r_code::SysObject *source);
   _Fact(_Fact *f);
   _Fact(uint16 opcode, r_code::Code *object, Timestamp after, Timestamp before, float32 confidence, float32 psln_thr);
 public:
+  static bool MatchAtom(Atom lhs, Atom rhs);
+  static bool MatchStructure(const r_code::Code* lhs, uint16 lhs_base_index, uint16 lhs_index, const r_code::Code* rhs, uint16 rhs_index, bool same_binding_state = false);
+  static bool Match(const r_code::Code* lhs, uint16 lhs_base_index, uint16 lhs_index, const r_code::Code* rhs, uint16 rhs_index, uint16 lhs_arity, bool same_binding_state = false);
+  static bool CounterEvidence(const r_code::Code* lhs, const r_code::Code* rhs);
   /**
    * Check if lhs matches rhs.
    * \param same_binding_state (optional) If false, then allow an unbound variable to match another
@@ -172,11 +171,11 @@ public:
    */
   static bool MatchObject(const r_code::Code *lhs, const r_code::Code *rhs, bool same_binding_state = false);
 
-  virtual bool is_invalidated();
+  bool is_invalidated() override;
 
   bool is_fact() const { return (code(0).asOpcode() == Opcodes::Fact); }
   bool is_anti_fact() const { return (code(0).asOpcode() == Opcodes::AntiFact); }
-  void set_opposite() const {
+  void set_opposite() {
     if (is_fact())
       code(0) = Atom::Object(Opcodes::AntiFact, FACT_ARITY);
     else
@@ -234,8 +233,8 @@ public:
   // For SIM_MANDATORY or SIM_OPTIONAL, provide solution_controller, solution_cfd and solution_before. Otherwise, defaults for SIM_ROOT.
   // For SIM_ROOT, solution_before is unused so use Utils::GetTimeReference() which is 0s:0ms:0us in the decompiled output.
   Sim(SimMode mode, std::chrono::microseconds thz, Fact *super_goal, bool opposite, Controller *root, float32 psln_thr, Controller *solution_controller = NULL, float32 solution_cfd = 0, Timestamp solution_before = r_code::Utils::GetTimeReference());
-  bool invalidate();
-  bool is_invalidated();
+  bool invalidate() override;
+  bool is_invalidated() override;
   // If SIM_MANDATORY or SIM_OPTIONAL: qualifies a sub-goal of the branch's root.
   SimMode get_mode() const { return (SimMode)(int)code(SIM_MODE).asFloat(); }
   // simulation time allowance (this is not the goal deadline); 0 indicates no time for simulation.
@@ -421,7 +420,7 @@ public:
    * call invalidate() and return true.
    * \return true if this is invalidated.
    */
-  bool is_invalidated();
+  bool is_invalidated() override;
   bool grounds_invalidated(_Fact *evidence);
 
   _Fact *get_target() const { return (_Fact *)get_reference(0); }
@@ -503,8 +502,8 @@ public:
   Goal(r_code::SysObject *source);
   Goal(_Fact *target, r_code::Code *actor, Sim* sim, float32 psln_thr);
 
-  bool invalidate();
-  bool is_invalidated();
+  bool invalidate() override;
+  bool is_invalidated() override;
   bool ground_invalidated(_Fact *evidence);
 
   bool is_requirement() const;
@@ -613,9 +612,23 @@ public:
   ICST();
   ICST(r_code::SysObject *source);
 
-  bool is_invalidated();
+  bool is_invalidated() override;
 
+  /**
+   * Check if the components_ contains the given component. This does not recurse.
+   * \param component The component to search for. This checks for the exact object (not a match).
+   * \param component_index If this returns true, set component_index to the index of the found component.
+   * \return True if found the component.
+   */
   bool contains(const _Fact *component, uint16 &component_index) const;
+
+  /**
+   * Check if the components_ or any sub icst contains the give component. (If a component is an f_icst, this
+   * recursively calls itself.)
+   * \param component The component to search for. This checks for the exact object (not a match).
+   * \return True if found the component.
+   */
+  bool r_contains(const _Fact* component) const;
 
   P<BindingMap> bindings_;
   std::vector<P<_Fact> > components_; // the inputs that triggered the building of the icst.

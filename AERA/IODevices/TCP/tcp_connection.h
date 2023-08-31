@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ Copyright (c) 2021 Leonard Eberding
 //_/_/ http://www.iiim.is
 //_/_/
@@ -71,7 +71,7 @@
 
 #include"../r_exec/init.h"
 
-#include "Proto/tcp_data_message.pb.h"
+#include "AERA_Protobuf/tcp_data_message.pb.h"
 namespace tcp_io_device {
 
   /**
@@ -132,10 +132,7 @@ namespace tcp_io_device {
       if (queue_.empty()) {
         return NULL;
       }
-      //std::cout << name_ << ": Message available, dequeueing" << std::endl;
-      std::cout << queue_.size() << std::endl;
       std::unique_ptr<TCPMessage> val = std::move(queue_.front());
-      //std::cout << name_ << ": Dequed message of type " << val->messagetype() << std::endl;
       queue_.pop();
       return val;
     }
@@ -201,6 +198,12 @@ namespace tcp_io_device {
     */
     bool isRunning() { return state_ == RUNNING; }
 
+    /**
+    * Check the socket if there is incoming data ready. This does not block.
+    * \param fd The socket file descriptor.
+    * \return 1 if data is ready, 0 if no data is ready, -1 for error.
+    */
+    static int receiveIsReady(SOCKET fd);
 
   protected:
 
@@ -215,7 +218,6 @@ namespace tcp_io_device {
 
     std::shared_ptr<std::thread> tcp_background_thread_;
 
-    FD_SET tcp_client_fd_set_;
     SOCKET tcp_client_socket_;
 
     uint64_t msg_buf_size_;

@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ Copyright (c) 2018 Thor Tomasarson
 //_/_/ http://www.iiim.is
 //_/_/ 
@@ -133,7 +133,7 @@ public:
   PrimaryMDLOverlay(Controller *c, const HLPBindingMap *bindngs);
   ~PrimaryMDLOverlay();
 
-  bool reduce(_Fact *input, Fact *f_p_f_imdl, MDLController *req_controller);
+  bool reduce(_Fact *input, Fact *f_p_f_imdl, MDLController *req_controller) override;
 };
 
 class SecondaryMDLOverlay :
@@ -142,7 +142,7 @@ public:
   SecondaryMDLOverlay(Controller *c, const HLPBindingMap *bindngs);
   ~SecondaryMDLOverlay();
 
-  bool reduce(_Fact *input, Fact *f_p_f_imdl, MDLController *req_controller);
+  bool reduce(_Fact *input, Fact *f_p_f_imdl, MDLController *req_controller) override;
 };
 
 class MDLController;
@@ -280,7 +280,7 @@ public:
 
   _Fact *get_lhs() const { return lhs_; }
   _Fact *get_rhs() const { return rhs_; }
-  Fact *get_f_ihlp(HLPBindingMap *bindings, bool wr_enabled) const {
+  Fact *get_f_ihlp(HLPBindingMap *bindings, bool wr_enabled) const override {
     return bindings->build_f_ihlp(get_object(), Opcodes::IMdl, wr_enabled);
   }
 
@@ -288,12 +288,13 @@ public:
    * If f_p_f_imdl->get_pred()->is_simulation(), then this is for a simulation.
    */
   virtual void store_requirement(_Fact *f_p_f_imdl, MDLController *controller, bool chaining_was_allowed) = 0;
-  ChainingStatus retrieve_imdl_fwd(HLPBindingMap *bm, Fact *f_imdl, RequirementsPair &r_p, Fact *&ground, MDLController *req_controller, bool &wr_enabled); // checks the requirement instances during fwd; r_p: all wrs in first, all srs in second.
+  ChainingStatus retrieve_imdl_fwd(const HLPBindingMap *bm, Fact *f_imdl, RequirementsPair &r_p, std::vector<BindingResult>& results, MDLController *req_controller, bool &wr_enabled); // checks the requirement instances during fwd; r_p: all wrs in first, all srs in second.
   ChainingStatus retrieve_imdl_bwd(HLPBindingMap *bm, Fact *f_imdl, Fact *&ground, Fact *&strong_requirement_ground); // checks the requirement instances during bwd; ground is set to the best weak requirement if chaining allowed, NULL otherwise.
   ChainingStatus retrieve_simulated_imdl_fwd(const HLPBindingMap *bm, Fact *f_imdl, Sim* sim, std::vector<BindingResult>& results);
   ChainingStatus retrieve_simulated_imdl_bwd(HLPBindingMap *bm, Fact *f_imdl, Sim* prediction_sim, Fact *&ground, Fact *&strong_requirement_ground);
 
-  virtual void predict(HLPBindingMap *bm, _Fact *input, Fact *f_imdl, bool chaining_was_allowed, RequirementsPair &r_p, Fact *ground) = 0;
+  virtual void predict(HLPBindingMap *bm, _Fact *input, Fact *f_imdl, bool chaining_was_allowed, RequirementsPair &r_p, Fact *ground,
+    std::vector<P<_Fact> >& already_predicted) = 0;
   virtual void register_pred_outcome(Fact *f_pred, bool success, _Fact *evidence, float32 confidence, bool rate_failures) = 0;
   virtual void register_req_outcome(Fact *f_pred, bool success, bool rate_failures) = 0;
 
@@ -307,7 +308,7 @@ public:
   void register_requirement(_Fact *f_pred, RequirementsPair &r_p);
 
   /**
-   * Get the last two values from the imdl template values, assuming that they are the timings
+   * Get the two timestamps from the last template value which is a ti value, assuming that they are the timings
    * from the prerequisite model.
    * \param imdl The imdl object.
    * \param after Set this to the after timestamp (if this returns true).
@@ -346,6 +347,7 @@ public:
   virtual void register_goal_outcome(Fact *goal, bool success, _Fact *evidence) const = 0;
   void register_predicted_goal_outcome(Fact *goal, HLPBindingMap *bm, Fact *f_imdl, bool success, bool injected_goal);
   virtual void register_simulated_goal_outcome(Fact *goal, bool success, _Fact *evidence) const = 0;
+  void inject_simulated_goal_success(Fact* goal, bool success, _Fact* evidence) const;
 };
 
 /**
@@ -374,27 +376,28 @@ public:
 class TopLevelMDLController :
   public PMDLController {
 private:
-  uint32 get_rdx_out_group_count() const { return get_out_group_count() - 1; } // so that rdx are not injected in the drives host.
+  uint32 get_rdx_out_group_count() const override { return get_out_group_count() - 1; } // so that rdx are not injected in the drives host.
 
   void abduce(HLPBindingMap *bm, Fact *super_goal, float32 confidence);
   void abduce_lhs(HLPBindingMap *bm, Fact *super_goal, _Fact *sub_goal_target, Fact *f_imdl, _Fact *evidence);
 
   void register_drive_outcome(Fact *goal, bool success) const;
 
-  void check_last_match_time(bool match) {}
+  void check_last_match_time(bool /* match */) override {}
 public:
   TopLevelMDLController(r_code::_View *view);
 
-  void take_input(r_exec::View *input);
+  void take_input(r_exec::View *input) override;
   void reduce(r_exec::View *input);
 
-  void store_requirement(_Fact *f_p_f_imdl, MDLController *controller, bool chaining_was_allowed); // never called.
+  void store_requirement(_Fact *f_p_f_imdl, MDLController *controller, bool chaining_was_allowed) override; // never called.
 
-  void predict(HLPBindingMap *bm, _Fact *input, Fact *f_imdl, bool chaining_was_allowed, RequirementsPair &r_p, Fact *ground);
-  void register_pred_outcome(Fact *f_pred, bool success, _Fact *evidence, float32 confidence, bool rate_failures);
-  void register_goal_outcome(Fact *goal, bool success, _Fact *evidence) const;
-  void register_simulated_goal_outcome(Fact *goal, bool success, _Fact *evidence) const;
-  void register_req_outcome(Fact *f_pred, bool success, bool rate_failures);
+  void predict(HLPBindingMap *bm, _Fact *input, Fact *f_imdl, bool chaining_was_allowed, RequirementsPair &r_p, Fact *ground,
+    std::vector<P<_Fact> >& already_predicted) override;
+  void register_pred_outcome(Fact *f_pred, bool success, _Fact *evidence, float32 confidence, bool rate_failures) override;
+  void register_goal_outcome(Fact *goal, bool success, _Fact *evidence) const override;
+  void register_simulated_goal_outcome(Fact *goal, bool success, _Fact *evidence) const override;
+  void register_req_outcome(Fact *f_pred, bool success, bool rate_failures) override;
 };
 
 class SecondaryMDLController;
@@ -429,8 +432,8 @@ private:
   r_code::list<P<r_code::Code> > assumptions_; // produced by the model; garbage collection at reduce() time..
 
   void rate_model(bool success);
-  void kill_views(); // force res in both primary/secondary to 0.
-  void check_last_match_time(bool match); // activate secondary controller if no match after primary_thz;
+  void kill_views() override; // force res in both primary/secondary to 0.
+  void check_last_match_time(bool match) override; // activate secondary controller if no match after primary_thz;
 
   void abduce_lhs(HLPBindingMap *bm, Fact *super_goal, Fact *f_imdl, bool opposite, float32 confidence, Sim *sim, Fact *ground, bool set_before);
   void abduce_imdl(HLPBindingMap *bm, Fact *super_goal, Fact *f_imdl, bool opposite, float32 confidence, Sim *sim);
@@ -457,20 +460,21 @@ public:
 
   void set_secondary(SecondaryMDLController *secondary);
 
-  void take_input(r_exec::View *input);
+  void take_input(r_exec::View *input) override;
   void reduce(r_exec::View *input);
   void reduce_batch(Fact *f_p_f_imdl, MDLController *controller);
 
-  void store_requirement(_Fact *f_p_f_imdl, MDLController *controller, bool chaining_was_allowed);
+  void store_requirement(_Fact *f_p_f_imdl, MDLController *controller, bool chaining_was_allowed) override;
 
-  void predict(HLPBindingMap *bm, _Fact *input, Fact *f_imdl, bool chaining_was_allowed, RequirementsPair &r_p, Fact *ground);
+  void predict(HLPBindingMap *bm, _Fact *input, Fact *f_imdl, bool chaining_was_allowed, RequirementsPair &r_p, Fact *ground,
+    std::vector<P<_Fact> >& already_predicted) override;
   bool inject_prediction(Fact *prediction, Fact *f_imdl, float32 confidence, Timestamp::duration time_to_live, r_code::Code *mk_rdx) const; // here, resilience=time to live, in us; returns true if the prediction has actually been injected.
 
-  void register_pred_outcome(Fact *f_pred, bool success, _Fact *evidence, float32 confidence, bool rate_failures);
-  void register_req_outcome(Fact *f_pred, bool success, bool rate_failures);
+  void register_pred_outcome(Fact *f_pred, bool success, _Fact *evidence, float32 confidence, bool rate_failures) override;
+  void register_req_outcome(Fact *f_pred, bool success, bool rate_failures) override;
 
-  void register_goal_outcome(Fact *goal, bool success, _Fact *evidence) const;
-  void register_simulated_goal_outcome(Fact *goal, bool success, _Fact *evidence) const;
+  void register_goal_outcome(Fact *goal, bool success, _Fact *evidence) const override;
+  void register_simulated_goal_outcome(Fact *goal, bool success, _Fact *evidence) const override;
 
   bool check_imdl(Fact *goal, HLPBindingMap *bm);
 
@@ -499,7 +503,7 @@ public:
   void abduce_no_simulation(Fact *super_goal, bool opposite, float32 confidence, _Fact* f_p_f_success = NULL);
 
   /**
-   * Get the last two values from the template parameters, assuming that they are the timings
+   * Get the two timestamps from the last template value which is a ti value, assuming that they are the timings
    * from the prerequisite model. This evaluates the backward guards if needed.
    * \param bm The binding map, which is not changed.
    * \param after Set this to the after timestamp (if this returns true).
@@ -525,22 +529,23 @@ private:
   CriticalSection last_match_timeCS_;
 
   void rate_model(); // record successes only.
-  void kill_views(); // force res in both primary/secondary to 0.
-  void check_last_match_time(bool match); // kill if no match after secondary_thz;
+  void kill_views() override; // force res in both primary/secondary to 0.
+  void check_last_match_time(bool match) override; // kill if no match after secondary_thz;
 public:
   SecondaryMDLController(r_code::_View *view);
 
   void set_primary(PrimaryMDLController *primary);
 
-  void take_input(r_exec::View *input);
+  void take_input(r_exec::View *input) override;
   void reduce(r_exec::View *input);
   void reduce_batch(Fact *f_p_f_imdl, MDLController *controller);
 
-  void store_requirement(_Fact *f_p_f_imdl, MDLController *controller, bool chaining_was_allowed);
+  void store_requirement(_Fact *f_p_f_imdl, MDLController *controller, bool chaining_was_allowed) override;
 
-  void predict(HLPBindingMap *bm, _Fact *input, Fact *f_imdl, bool chaining_was_allowed, RequirementsPair &r_p, Fact *ground);
-  void register_pred_outcome(Fact *f_pred, bool success, _Fact *evidence, float32 confidence, bool rate_failures);
-  void register_req_outcome(Fact *f_pred, bool success, bool rate_failures);
+  void predict(HLPBindingMap *bm, _Fact *input, Fact *f_imdl, bool chaining_was_allowed, RequirementsPair &r_p, Fact *ground,
+    std::vector<P<_Fact> >& already_predicted) override;
+  void register_pred_outcome(Fact *f_pred, bool success, _Fact *evidence, float32 confidence, bool rate_failures) override;
+  void register_req_outcome(Fact *f_pred, bool success, bool rate_failures) override;
 };
 }
 

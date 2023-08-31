@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -91,6 +91,8 @@ uint16 Opcodes::View;
 uint16 Opcodes::PgmView;
 uint16 Opcodes::GrpView;
 
+uint16 Opcodes::TI;
+
 uint16 Opcodes::Ent;
 uint16 Opcodes::Ont;
 uint16 Opcodes::MkVal;
@@ -151,6 +153,10 @@ uint16 Opcodes::Swap;
 uint16 Opcodes::Prb;
 uint16 Opcodes::Stop;
 
+uint16 Opcodes::Gtr;
+uint16 Opcodes::Lsr;
+uint16 Opcodes::Gte;
+uint16 Opcodes::Lse;
 uint16 Opcodes::Add;
 uint16 Opcodes::Sub;
 uint16 Opcodes::Mul;

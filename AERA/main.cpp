@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -90,6 +90,7 @@
 #include "init.h"
 #include "image_impl.h"
 #include "settings.h"
+#include "main.h"
 
 
 //#define DECOMPILE_ONE_BY_ONE
@@ -217,8 +218,8 @@ void decompile(Decompiler &decompiler, r_comp::Image *image, Timestamp time_refe
       continue;
     }
     std::ostringstream decompiled_code;
-    decompiler.decompile_object(index, &decompiled_code, time_offset);
-    std::cout << "\n\n> DECOMPILATION. TimeReference " << Time::ToString_seconds(time_reference) << "\n\n" <<
+    decompiler.decompile_object(index, &decompiled_code, time_reference);
+    std::cout << "\n\n> DECOMPILATION. TimeReference " << Utils::ToString_s_ms_us(time_reference, Timestamp(seconds(0))) << "\n\n" <<
       decompiled_code.str() << std::endl;
   }
 #else
@@ -260,12 +261,11 @@ void write_to_file(r_comp::Image *image, std::string &image_path, Decompiler *de
   }
 }
 
-int32 main(int argc, char **argv) {
+int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
 
   core::Time::Init(1000);
 
   Settings settings;
-  const char* file_name = (argc >= 2 ? argv[1] : "settings.xml");
   if (!settings.load(file_name))
     return 1;
 
@@ -279,17 +279,21 @@ int32 main(int argc, char **argv) {
   }
 
   std::cout << "> compiling ...\n";
+  r_exec::SharedFunctionLibrary userOperatorLibrary;
+  if (!userOperatorLibrary.load(settings.usr_operator_path_.c_str()))
+    return 2;
+
   if (settings.reduction_core_count_ == 0 && settings.time_core_count_ == 0) {
     // Below, we will use run_in_diagnostic_time.
     // Initialize the diagnostic time to the real now.
     r_exec::_Mem::diagnostic_time_now_ = Time::Get();
     if (!r_exec::Init
-    (settings.usr_operator_path_.c_str(), r_exec::_Mem::get_diagnostic_time_now,
+     (&userOperatorLibrary, r_exec::_Mem::get_diagnostic_time_now,
       settings.usr_class_path_.c_str()))
       return 2;
   }
   else {
-    if (!r_exec::Init(settings.usr_operator_path_.c_str(), Time::Get, settings.usr_class_path_.c_str()))
+    if (!r_exec::Init(&userOperatorLibrary, Time::Get, settings.usr_class_path_.c_str()))
       return 2;
   }
 
@@ -402,13 +406,6 @@ int32 main(int argc, char **argv) {
       Thread::Sleep(milliseconds(settings.run_time_));
     }
 
-    /*Thread::Sleep(settings.run_time/2);
-    test_many_injections(mem,
-        argc > 2 ? atoi(argv[2]) : 100, // sampling period in ms
-        argc > 3 ? atoi(argv[3]) : 600, // number of batches
-        argc > 4 ? atoi(argv[4]) : 66); // number of objects per batch
-    Thread::Sleep(settings.run_time/2);*/
-
     std::cout << "\n> shutting rMem down...\n";
     mem->stop();
 
@@ -424,7 +421,7 @@ int32 main(int argc, char **argv) {
 
       if (settings.decompile_objects_ && (!settings.write_objects_ || !settings.test_objects_)) {
 
-        if (settings.decompile_to_file_) { // argv[2] is a file to redirect the decompiled code to.
+        if (settings.decompile_to_file_) {
 
           std::ofstream outfile;
           outfile.open(settings.decompilation_file_path_.c_str(), std::ios_base::trunc);
@@ -452,10 +449,10 @@ int32 main(int argc, char **argv) {
 
       if (settings.decompile_models_ && (!settings.write_models_ || !settings.test_models_)) {
 
-        if (argc > 2) { // argv[2] is a file to redirect the decompiled code to.
+        if (decompiled_file_name && decompiled_file_name[0] != '\0') {
 
           std::ofstream outfile;
-          outfile.open(argv[2], std::ios_base::trunc);
+          outfile.open(decompiled_file_name, std::ios_base::trunc);
           std::streambuf *coutbuf = std::cout.rdbuf(outfile.rdbuf());
 
           decompile(decompiler, image, starting_time, settings.ignore_named_models_);

@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -306,8 +306,12 @@ bool CSTOverlay::reduce(View *input, CSTOverlay *&offspring) {
         // The actual input fact matches (positive or negative) a defeasible promoted fact, so invalidated it.
         predictionSimulation->defeating_facts_.push_back(input_object);
         d->defeasible_validity_->invalidate();
+        string defeasible_validity_info;
+#ifdef WITH_DETAIL_OID
+        defeasible_validity_info = " with DefeasibleValidity(" + to_string(d->defeasible_validity_->get_detail_oid()) + ")";
+#endif
         OUTPUT_LINE(CST_OUT, Utils::RelativeTime(now) << " promoted simulated fact " << d->promoted_fact_->get_oid() <<
-          " defeated by fact " << input->object_->get_oid());
+          defeasible_validity_info << " defeated by fact " << input->object_->get_oid());
         // We don't need this entry any more.
         d = predictionSimulation->defeasible_promoted_facts_.list_.erase(d);
       }
@@ -676,17 +680,9 @@ void CSTController::inject_goal(HLPBindingMap *bm,
   OUTPUT_LINE(CST_OUT, Utils::RelativeTime(Now()) << " cst " << get_object()->get_oid() << ": fact " <<
     f_super_goal->get_oid() << " super_goal -> fact " << sub_goal_f->get_oid() << " simulated goal");
 
-  if (sim->get_mode() == SIM_ROOT) { // no rdx for SIM_OPTIONAL or SIM_MANDATORY.
-
-    MkRdx *mk_rdx = new MkRdx(f_icst, f_super_goal, sub_goal, 1, bm);
-    uint16 out_group_count = get_out_group_count();
-    for (uint16 i = 0; i < out_group_count; ++i) {
-
-      Group *out_group = (Group *)get_out_group(i);
-      View *view = new NotificationView(group, out_group, mk_rdx);
-      _Mem::Get()->inject_notification(view, true);
-    }
-  }
+  // no rdx for SIM_OPTIONAL or SIM_MANDATORY.
+  if (sim->get_mode() == SIM_ROOT)
+    inject_notification_into_out_groups(group, new MkRdx(f_icst, f_super_goal, sub_goal, 1, bm));
 }
 
 Fact *CSTController::get_f_ihlp(HLPBindingMap *bindings, bool wr_enabled) const {

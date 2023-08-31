@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -92,14 +92,21 @@ using namespace r_code;
 
 namespace r_exec {
 
-Overlay::Overlay() : _Object(), invalidated_(0) {
+Overlay::Overlay()
+  // MAX_VALUE_SIZE is the limit; if the array is resized later on, some contexts with data==VALUE_ARRAY
+  // may point to invalid adresses: case of embedded contexts with both data==VALUE_ARRAY.
+  : Overlay(MAX_VALUE_SIZE)
+{}
 
-  values_.as_std()->resize(MAX_VALUE_SIZE); // MAX_VALUE_SIZE is the limit; if the array is resized later on, some contexts with data==VALUE_ARRAY may point to invalid adresses: case of embedded contexts with both data==VALUE_ARRAY.
+Overlay::Overlay(size_t values_size) : _Object(), invalidated_(0) {
+
+  code_ = new r_code::Atom[1];
+  values_.resize(values_size);
 }
 
 Overlay::Overlay(Controller *c, bool load_code) : _Object(), controller_(c), value_commit_index_(0), code_(NULL), invalidated_(0) {
 
-  values_.as_std()->resize(128);
+  values_.resize(128);
   if (load_code)
     this->load_code();
 }
@@ -143,9 +150,9 @@ void Overlay::rollback() {
   if (value_commit_index_ != values_.size()) { // shrink the values down to the last commit index.
 
     if (value_commit_index_ > 0)
-      values_.as_std()->resize(value_commit_index_);
+      values_.resize(value_commit_index_);
     else
-      values_.as_std()->clear();
+      values_.clear();
     value_commit_index_ = values_.size();
   }
 }

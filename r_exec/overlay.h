@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -145,7 +145,7 @@ protected:
 
   CriticalSection reductionCS_;
 
-  virtual void take_input(r_exec::View *input) {}
+  virtual void take_input(r_exec::View* /* input */) {}
   template<class C> void __take_input(r_exec::View *input) { // utility: to be called by sub-classes.
 
     ReductionJob<C> *j = new ReductionJob<C>(input, (C *)this);
@@ -181,7 +181,7 @@ public:
 
   void set_view(View *view);
 
-  void debug(View *input) {}
+  void debug(View* /* input */) {}
 };
 
 class _Context;
@@ -222,6 +222,7 @@ protected:
   Overlay();
   Overlay(Controller *c, bool load_code = true);
 public:
+  Overlay(size_t values_size);
   virtual ~Overlay();
 
   virtual void reset(); // reset to original state.
@@ -234,6 +235,7 @@ public:
   r_exec::View *get_view() const { return ((Controller *)controller_)->get_view(); }
 
   r_code::Code *build_object(r_code::Atom head) const;
+  const Atom* values() const { return &values_[0]; }
 };
 
 class r_exec_dll OController :

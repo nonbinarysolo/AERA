@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -253,7 +253,8 @@ void SGuardBuilder::build(Code *mdl, _Fact *premise_pattern, _Fact *cause_patter
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-NoArgCmdGuardBuilder::NoArgCmdGuardBuilder(microseconds period, microseconds offset, microseconds cmd_duration) : TimingGuardBuilder(period), offset_(offset), cmd_duration_(cmd_duration) {
+NoArgCmdGuardBuilder::NoArgCmdGuardBuilder(microseconds period, microseconds offset, microseconds cmd_duration)
+: TimingGuardBuilder(period), offset_(offset), cmd_duration_(cmd_duration) {
 }
 
 NoArgCmdGuardBuilder::~NoArgCmdGuardBuilder() {
@@ -279,8 +280,8 @@ void NoArgCmdGuardBuilder::_build(Code *mdl, uint16 q0, uint16 t0, uint16 t1, ui
 
   write_index = extent_index;
   mdl->code(MDL_BWD_GUARDS) = Atom::IPointer(++write_index);
-  mdl->code(write_index) = Atom::Set(4);
 
+  mdl->code(write_index) = Atom::Set(4);
   extent_index = write_index + 4;
 
   write_guard(mdl, t0, t2, Opcodes::Sub, period_, write_index, extent_index);

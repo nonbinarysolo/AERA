@@ -3,8 +3,8 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2022 Jeff Thompson
-//_/_/ Copyright (c) 2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2022-2023 Jeff Thompson
+//_/_/ Copyright (c) 2022-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/
 //_/_/ --- Open-Source BSD License, with CADIA Clause v 1.0 ---
@@ -77,7 +77,7 @@ template<class O, class S> VideoScreenIoDevice<O, S>::~VideoScreenIoDevice() {
 }
 
 template<class O, class S> bool VideoScreenIoDevice<O, S>::load
-  (vector<Code*> *objects, uint32 stdin_oid, uint32 stdout_oid,
+  (const vector<Code*> *objects, uint32 stdin_oid, uint32 stdout_oid,
     uint32 self_oid) {
   // Call the method in the parent class.
   if (!MemExec<O, S>::load(objects, stdin_oid, stdout_oid, self_oid))

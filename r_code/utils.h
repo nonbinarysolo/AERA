@@ -3,9 +3,9 @@
 //_/_/ AERA
 //_/_/ Autocatalytic Endogenous Reflective Architecture
 //_/_/ 
-//_/_/ Copyright (c) 2018-2022 Jeff Thompson
-//_/_/ Copyright (c) 2018-2022 Kristinn R. Thorisson
-//_/_/ Copyright (c) 2018-2022 Icelandic Institute for Intelligent Machines
+//_/_/ Copyright (c) 2018-2023 Jeff Thompson
+//_/_/ Copyright (c) 2018-2023 Kristinn R. Thorisson
+//_/_/ Copyright (c) 2018-2023 Icelandic Institute for Intelligent Machines
 //_/_/ http://www.iiim.is
 //_/_/ 
 //_/_/ Copyright (c) 2010-2012 Eric Nivel
@@ -185,8 +185,13 @@ public:
   template<class O> static bool HasTimestamp(const O *object, uint16 index) {
     if (object->code_size() <= index)
       return false;
-    uint16 t_index = object->code(index).asIndex();
-    return object->code_size() > t_index + 2;
+    Atom a = object->code(index);
+    if (a.getDescriptor() != Atom::I_PTR)
+      return false;
+    uint16 t_index = a.asIndex();
+    if (object->code_size() <= t_index + 2)
+      return false;
+    return object->code(t_index).getDescriptor() == Atom::TIMESTAMP;
   }
 
   /**
@@ -222,7 +227,7 @@ public:
    * Make a string from (timestamp - time_reference) in the form XXXs:YYYms:ZZZus, with a minus sign
    * if it is negative.
    * \param timestamp The time stamp.
-   * \param time_reference The reference time to subtract from timestamp, usuall the session start time.
+   * \param time_reference The reference time to subtract from timestamp, usually the session start time.
    * We do this because timestamp is seconds since 01/01/1970, so the seconds would be very large.
    * \return The formatted time string.
    */
