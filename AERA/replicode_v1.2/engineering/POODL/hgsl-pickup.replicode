@@ -1,0 +1,417 @@
+; Based on the hand-grab-sphere-learn program. This version is stripped down
+; to just focus on the hand grabbing the sphere. This is intended to model
+; a simple POODL program with only a single instruction:
+;   (pickup "sphere" WITH "hand" UNTIL "held" [])
+;
+; Because of the simplicity, AERA doesn't really get a chance to learn anything
+; it just automatically achieves its goal through motor babbling. Still useful
+; as a demo, though. In terms of what the POODL transpiler would do, it would
+; drop the goal into the m_drive model and then leave everything else to the emulator.
+
+
+; Set up objects
+h:(ent 1) [[SYNC_ONCE now 1 forever root nil]]
+h_is_a_hand:(mk.val h essence hand 1) |[]
+(fact h_is_a_hand 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+s:(ent 1) [[SYNC_ONCE now 1 forever root nil]]
+s_is_a_sphere:(mk.val s essence sphere 1) |[]
+(fact s_is_a_sphere 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+s_is_a_hand:(mk.val s essence hand 1) |[]
+; This is needed for S3.
+(|fact s_is_a_hand 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+
+; Internal state used by the programs to emulate the environment.
+; (mk.val e1 emulator_state [Holding_obj])
+e1:(ent 1) [[SYNC_ONCE now 1 forever root nil]]
+emulator_state:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+; Inject the emulator state into the emulator group.
+emulator:(std_grp 2 0 0 0 []) [[SYNC_ONCE now 0 forever root nil COV_OFF 0]]
+
+; This program runs in the primary group to re-inject any (fact (goal (fact (cmd ::)))) into emulator.
+pgm_inject_in_emulator_group:(pgm [] []
+   (ptn F_G:(fact G:(goal (fact (cmd ::) ::) ::) ::) [])
+[]
+   ; Only re-inject non-simulation goals.
+   (= (is_sim G) false)
+[]
+   (inj [F_G [SYNC_ONCE (now) 1 1 emulator nil]])
+1) |[]
+(ipgm pgm_inject_in_emulator_group [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+
+; Execute babble pass A commands.
+!def DRIVE_PASS1_START 1300ms
+!def DRIVE_PASS1_END (+ DRIVE_PASS1_START 300ms)
+; Execute experimenting pass A commands.
+!def DRIVE_PASS2_START (+ DRIVE_PASS1_END 600ms)
+
+; Initial conditions.
+start:(pgm [] [] [] []
+   (inj [State:(mk.val e1 emulator_state [nil] 1) []])
+   (inj []
+      (fact State After:(now) (+ After sampling_period) 1 1)
+      [SYNC_PERIODIC now 1 1 emulator nil]
+   )
+1) |[]
+(ipgm start [] RUN_ONCE sampling_period VOLATILE NOTIFY 1) [[SYNC_ONCE now 0 forever stdin nil 1]]
+
+m_drive:(mdl [] []
+   ; The goal target timings are the same as the drive timings.
+   (fact (mk.val h holding [s] 1) T0: T1: 1 1)
+   (fact run T0: T1: ::)
+|[]
+|[]
+[stdin drives] 1 1 1 0 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+
+pgm_babbleA_3:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt 300ms))
+[]
+   ; Grab the sphere.
+   (inj [Command:(cmd grab [h] 1) []])
+   (inj [F_Command:(fact Command After Before 1 1) []])
+   (inj [G:(goal F_Command self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before processing.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected (cmd grab [h])" []])
+1) |[]
+(ipgm pgm_babbleA_3 [] RUN_ONCE MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_babbleA_4:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt 400ms))
+[]
+   ; Release the sphere to learn the release model and the "holding" cst.
+   (inj [Command:(cmd release [h] 1) []])
+   (inj [F_Command:(fact Command After Before 1 1) []])
+   (inj [G:(goal F_Command self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before processing.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected (cmd release [h])" []])
+1) |[]
+(ipgm pgm_babbleA_4 [] RUN_ONCE MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_babbleA_5:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt 500ms))
+[]
+   ; Grab the sphere again so we can move while holding it.
+   (inj [Command:(cmd grab [h] 1) []])
+   (inj [F_Command:(fact Command After Before 1 1) []])
+   (inj [G:(goal F_Command self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before processing.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected (cmd grab [h])" []])
+1) |[]
+(ipgm pgm_babbleA_5 [] RUN_ONCE MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_babbleA_7:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt 700ms))
+[]
+   ; Release the sphere in the initial position for the task.
+   (inj [Command:(cmd release [h] 1) []])
+   (inj [F_Command:(fact Command After Before 1 1) []])
+   (inj [G:(goal F_Command self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before processing.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected (cmd release [h])" []])
+1) |[]
+(ipgm pgm_babbleA_7 [] RUN_ONCE MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_inject_drive_pass1:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt DRIVE_PASS1_START))
+   (< After (+ this.vw.ijt DRIVE_PASS1_END))
+[]
+   ; The end of the time interval will be used in m_drive as the end of the goal interval.
+   (inj [F_run:(fact run After (+ Before 500ms) 1 1) []])
+   (inj [G:(goal F_run self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before injecting the drive.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected drive" []])
+1) |[]
+(ipgm pgm_inject_drive_pass1 [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_inject_drive_pass2:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt DRIVE_PASS2_START))
+[]
+   ; The end of the time interval will be used in m_drive as the end of the goal interval.
+   (inj [F_run:(fact run After (+ Before 500ms) 1 1) []])
+   (inj [G:(goal F_run self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before injecting the drive.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected drive" []])
+1) |[]
+(ipgm pgm_inject_drive_pass2 [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_experimentingA_1:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt (+ DRIVE_PASS1_END 100us)))
+[]
+   (inj [Command:(cmd release [h] 1) []])
+   (inj [F_Command:(fact Command After Before 1 1) []])
+   (inj [G:(goal F_Command self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before processing.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected (cmd release [h])" []])
+1) |[]
+(ipgm pgm_experimentingA_1 [] RUN_ONCE MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_experimentingA_2:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt (+ DRIVE_PASS1_END 200ms)))
+[]
+   (inj [Command:(cmd grab [h] 1) []])
+   (inj [F_Command:(fact Command After Before 1 1) []])
+   (inj [G:(goal F_Command self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before processing.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected (cmd grab [h])" []])
+1) |[]
+(ipgm pgm_experimentingA_2 [] RUN_ONCE MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_experimentingA_3:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt (+ DRIVE_PASS1_END 300ms)))
+[]
+   (inj [Command:(cmd release [h] 1) []])
+   (inj [F_Command:(fact Command After Before 1 1) []])
+   (inj [G:(goal F_Command self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before processing.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected (cmd release [h])" []])
+1) |[]
+(ipgm pgm_experimentingA_3 [] RUN_ONCE MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+pgm_experimentingA_4:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt (+ DRIVE_PASS1_END 400ms)))
+[]
+   (inj [Command:(cmd grab [h] 1) []])
+   (inj [F_Command:(fact Command After Before 1 1) []])
+   (inj [G:(goal F_Command self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before processing.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected (cmd grab [h])" []])
+1) |[]
+(ipgm pgm_experimentingA_4 [] RUN_ONCE MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+
+; Emulator programs
+pgm_cmd_release_h:(pgm [] []
+   (ptn (fact G:(goal (fact Command:(cmd release [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+[]
+   (= (is_sim G) false)
+   (<> Holding_obj nil)
+   (< Cmd_after Before)
+   (> Cmd_before After)
+[]
+   ; Inject the fact that the command was executed.
+   (inj []
+      (fact Command (+ After 20ms) Before 1 1)
+      [SYNC_ONCE After 1 1 stdin nil]
+   )
+   ; h is now not holding.
+   (inj [Next_state:(mk.val e1 emulator_state [nil] 1) []])
+   (inj []
+      (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
+      [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+   )
+   (prb [1 "print" "pgm_cmd_release_h from command:" [Command]])
+1) |[]
+(ipgm pgm_cmd_release_h [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+pgm_cmd_release_h_fail:(pgm [] []
+   (ptn (fact G:(goal (fact Command:(cmd release [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+[]
+   (= (is_sim G) false)
+   (<> Holding_obj nil)
+   (< Cmd_after Before)
+   (> Cmd_before After)
+[]
+   ; Inject the fact that the command was executed.
+   (inj []
+      (fact Command (+ After 20ms) Before 1 1)
+      [SYNC_ONCE After 1 1 stdin nil]
+   )
+   ; h is still holding.
+   (inj [Next_state:(mk.val e1 emulator_state [Holding_obj] 1) []])
+   (inj []
+      (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
+      [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+   )
+   (prb [1 "print" "pgm_cmd_release_h_fail from command:" [Command]])
+1) |[]
+(ipgm pgm_cmd_release_h_fail [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+pgm_cmd_release_h_not_holding:(pgm [] []
+   (ptn (fact G:(goal (fact Command:(cmd release [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [nil] :) After: Before: ::) [])
+[]
+   (= (is_sim G) false)
+   (< Cmd_after Before)
+   (> Cmd_before After)
+[]
+   ; Inject the fact that the command was executed.
+   (inj []
+      (fact Command (+ After 20ms) Before 1 1)
+      [SYNC_ONCE After 1 1 stdin nil]
+   )
+   ; h is still not holding.
+   (inj [Next_state:(mk.val e1 emulator_state [nil] 1) []])
+   (inj []
+      (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
+      [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+   )
+   (prb [1 "print" "pgm_cmd_release_h_not_holding from command:" [Command]])
+1) |[]
+(ipgm pgm_cmd_release_h_not_holding [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+pgm_cmd_grab_h_s:(pgm [] []
+   (ptn (fact G:(goal F_G:(fact Command:(cmd grab [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [nil] :) After: Before: ::) [])
+[]
+   (= (is_sim G) false)
+   (< Cmd_after Before)
+   (> Cmd_before After)
+[]
+   ; Inject the fact that the command was executed.
+   (inj []
+      (fact Command (+ After 20ms) Before 1 1)
+      [SYNC_ONCE After 1 1 stdin nil]
+   )
+   ; We already checked that s is at the hand's position.
+   (inj [Next_state:(mk.val e1 emulator_state [s] 1) []])
+   (inj []
+      (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
+      [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+   )
+   (prb [1 "print" "pgm_cmd_grab_h_s from command:" [F_G]])
+1) |[]
+(ipgm pgm_cmd_grab_h_s [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+
+pgm_cmd_grab_h_already_holding:(pgm [] []
+   (ptn (fact G:(goal F_G:(fact Command:(cmd grab [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+[]
+   (= (is_sim G) false)
+   (<> Holding_obj nil)
+   (< Cmd_after Before)
+   (> Cmd_before After)
+[]
+   ; Inject the fact that the command was executed.
+   (inj []
+      (fact Command (+ After 20ms) Before 1 1)
+      [SYNC_ONCE After 1 1 stdin nil]
+   )
+   ; Still holding.
+   (inj [Next_state:(mk.val e1 emulator_state [Holding_obj] 1) []])
+   (inj []
+      (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
+      [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+   )
+   (prb [1 "print" "pgm_cmd_grab_h_s from command:" [F_G]])
+1) |[]
+(ipgm pgm_cmd_grab_h_already_holding [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+; Match the emulator state and inject individual mk.val at the same time for each of
+; the state variables as needed.
+pgm_inject_mk_vals_holding:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+[]
+   (<> Holding_obj nil)
+[]
+   (inj [Val_holding:(mk.val h holding [Holding_obj] 1) []])
+   (inj []
+      (fact Val_holding After Before 1 1)
+      [SYNC_PERIODIC After 1 1 stdin nil]
+   )
+1) |[]
+(ipgm pgm_inject_mk_vals_holding [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+; The same as pgm_inject_mk_vals_holding for the case when not holding.
+pgm_inject_mk_vals_not_holding:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [nil] :) After: Before: ::) [])
+|[]
+[]
+   (inj [Val_holding:(mk.val h holding [] 1) []])
+   (inj []
+      (fact Val_holding After Before 1 1)
+      [SYNC_PERIODIC After 1 1 stdin nil]
+   )
+1) |[]
+(ipgm pgm_inject_mk_vals_not_holding [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]

@@ -74,6 +74,9 @@
     <Filter Include="replicode_v1.2\engineering">
       <UniqueIdentifier>{23512954-c817-4696-86cf-efc0fdfb8e95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="replicode_v1.2\engineering\POODL">
+      <UniqueIdentifier>{7c93f0e5-d93e-4257-985b-7959fd434cf2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="Demo1\initial.HLP.replicode">
@@ -315,6 +318,9 @@
     </None>
     <None Include="replicode_v1.2\engineering\hand-grab-sphere-mods.replicode">
       <Filter>replicode_v1.2\engineering</Filter>
+    </None>
+    <None Include="replicode_v1.2\engineering\POODL\hgsl-pickup.replicode">
+      <Filter>replicode_v1.2\engineering\POODL</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
