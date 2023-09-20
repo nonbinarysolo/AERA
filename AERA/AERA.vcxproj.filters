@@ -325,6 +325,9 @@
     <None Include="replicode_v1.2\engineering\POODL\hgs-pickup.replicode">
       <Filter>replicode_v1.2\engineering\POODL</Filter>
     </None>
+    <None Include="replicode_v1.2\engineering\POODL\toothbrush-twostep.replicode">
+      <Filter>replicode_v1.2\engineering\POODL</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="NatvisFile.natvis" />

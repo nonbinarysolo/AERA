@@ -1,0 +1,256 @@
+; Based on the hgs-pickup program. This includes an extra step as a demonstration
+; of an EDA's ability to chain multiple operations together to produce a solution
+; to a problem. In this case, it's creating a screwdriver in order to remove a 
+; screw. In POODL, the solution should look like this:
+;   (unscrew "screw" WITH "toothbrush" UNTIL "removed" [
+;       (whittle "toothbrush" WITH "knife" UNTIL "screwdriver-shaped" [])
+;   ])
+;
+; The POODL prompt for this would be (where "BLANK" refers to steps or objects
+; the agent may fill in):
+;   (unscrew "screw" WITH "BLANK" UNTIL "removed" [BLANK])
+
+; Set up the objects and ontologies
+screw:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+toothbrush:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+knife:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+state:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+s:(ent 1) [[SYNC_ONCE now 1 forever root nil]] ; A screw
+t:(ent 1) [[SYNC_ONCE now 1 forever root nil]] ; A toothbrush
+k:(ent 1) [[SYNC_ONCE now 1 forever root nil]] ; A knife
+
+; Set some facts about the objects
+s_is_a_screw:(mk.val h essence screw 1) |[]
+(fact s_is_a_screw 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+t_is_a_toothbrush:(mk.val h essence toothbrush 1) |[]
+(fact t_is_a_toothbrush 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+
+; Set up the emulator state and inject it
+; emulator_state: [Is the screw unscrewed?, Is the toothbrush shaped like a screwdriver?]
+e1:(ent 1) [[SYNC_ONCE now 1 forever root nil]]
+emulator_state:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
+emulator:(std_grp 2 0 0 0 []) [[SYNC_ONCE now 0 forever root nil COV_OFF 0]]
+
+; This program runs in the primary group to re-inject any (fact (goal (fact (cmd ::)))) into emulator.
+pgm_inject_in_emulator_group:(pgm [] []
+   (ptn f_G:(fact G:(goal (fact (cmd ::) ::) ::) ::) [])
+[]
+   ; Only re-inject non-simulation goals.
+   (= (is_sim G) false)
+[]
+   (inj [f_G [SYNC_ONCE (now) 1 1 emulator nil]])
+1) |[]
+(ipgm pgm_inject_in_emulator_group [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+
+; Models and CSTs
+; M0: If we use a screwdriver-shaped thing on a screw, it will become unscrewed
+; M1: If we have a screw and a screwdriver-shaped thing, we can use M0
+; S0: I have a screw and screwdriver-shaped thing
+; M2: If we whittle a toothbrush with a knife, it will be screwdriver-shaped
+; M3: If we have a knife and a toothbrush (that is not screwdriver-shaped), we can use M2
+; S1: I have a knife and a toothbrush
+
+; Set up the CSTs
+S0:
+
+S1:
+
+; Set up the models
+M0:
+M1:
+
+M2:
+M3:
+
+
+; When the hand H is asked to grab whatever, then H will be holding it.
+M2:(mdl [H: C: (ti T0: T1:)] []
+   (fact (cmd grab [H:] :) T2: T1_cmd: : :); Change T1 to T1_cmd.
+   (fact (mk.val H: holding [C:] :) T1_RHS: T3: : :); Change T1 to T1_RHS.
+[]
+   T1_RHS:(+ T0 100ms); Copy from M0.
+   T3:(+ T1 100ms);     Copy from M0.
+[]
+   T2:(- T1_RHS 80ms);  Copy from M0.
+   T1_cmd:(- T3 100ms); Copy from M0.
+   T0:(- T1_RHS 100ms); Copy from M0.
+   T1:(- T3 100ms);     Copy from M0.
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+; M2 will work (hand H will be holding something) if it's not already holding something
+M3:(mdl [] []
+   (fact (mk.val H: holding [] :) T0: T1: : :);
+   (fact (imdl M2 [H: C: (ti T0: T1:)] [T1_RHS: T3:] : :) T0: T1: : :); T2 is not exposed from M2. T1_RHS is also exposed.
+|[]
+|[]
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+; Hand H and object C are at the same position P and H is already holding C.
+S2:(cst [] []
+   (fact (mk.val H: holding [C:] :) T0: T1: : :)
+[]
+   (<> C nil); Make sure the object C is not nil.
+[]
+   (<> C nil); Make sure the object C is not nil.
+[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+; When my hand H is holding a thing C and I release my hand, it is not holding anymore.
+M4:(mdl [H: C: T0: T1:] []
+   (fact (cmd release [H:] :) T2: T1_cmd: : :); Change T1 to T1_cmd.
+   (fact (mk.val H: holding [] :) T1_RHS: T3: : :); Change T1 to T1_RHS. Change anti-fact to fact of holding [].
+[]
+   T1_RHS:(+ T0 100ms); Copy from M0.
+   T3:(+ T1 100ms);     Copy from M0.
+[]
+   T2:(- T1_RHS 80ms);  Copy from M0.
+   T1_cmd:(- T3 100ms); Copy from M0.
+   T0:(- T1_RHS 100ms); Copy from M0.
+   T1:(- T3 100ms);     Copy from M0.
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+; M4 will work (hand H will not be holding some C) if it is at the same position as hand H and H is already holding it.
+M5:(mdl [] []
+   (fact (icst S2 [] [H: C: X:] : :) T0: T1: : :); X is also exposed from S2.
+   (fact (imdl M4 [H: C: T0: T1:] [T1_RHS: T3:] : :) T0: T1: : :); T2 is not exposed from M4. T1_RHS is also exposed.
+|[]
+|[]
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+
+
+
+!def DRIVE_START 300ms
+
+; Initial conditions.
+start:(pgm [] [] [] []
+   (inj [State:(mk.val e1 emulator_state [false false] 1) []])
+   (inj []
+      (fact State After:(now) (+ After sampling_period) 1 1)
+      [SYNC_PERIODIC now 1 1 emulator nil]
+   )
+1) |[]
+(ipgm start [] RUN_ONCE sampling_period VOLATILE NOTIFY 1) [[SYNC_ONCE now 0 forever stdin nil 1]]
+
+m_drive:(mdl [] []
+   ; The goal target timings are the same as the drive timings.
+   (fact (mk.val s state "unscrewed" 1) T0: T1: 1 1)
+   (fact run T0: T1: ::)
+|[]
+|[]
+[stdin drives] 1 1 1 0 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+pgm_inject_drive:(pgm [] []
+   ; This fact repeats periodically. We use it as a "heartbeat".
+   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+[]
+   (>= After (+ this.vw.ijt DRIVE_START))
+[]
+   ; The end of the time interval will be used in m_drive as the end of the goal interval.
+   (inj [f_run:(fact run After (+ Before 500ms) 1 1) []])
+   (inj [G:(goal f_run self nil 1) []])
+   (inj []
+      ; Delay a little to allow predictions for this sampling period before injecting the drive.
+      (fact G T0:(+ After 10ms) T0 1 1)
+      [SYNC_ONCE T0 1 forever primary nil]
+   )
+   (prb [1 "print" "injected drive" []])
+1) |[]
+(ipgm pgm_inject_drive [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever primary nil 1]
+
+; Before DRIVE_START, just re-inject the same values.
+pgm_before_drive:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+[]
+   (< After (+ this.vw.ijt DRIVE_START))
+[]
+   ; All state variables keep the same value.
+   (inj [Next_state:(mk.val e1 emulator_state [Holding_obj] 1) []])
+   (inj []
+      (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
+      [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+   )
+1) |[]
+(ipgm pgm_before_drive [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+pgm_cmd_release_h:(pgm [] []
+   (ptn (fact G:(goal (fact Command:(cmd release [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+[]
+   (= (is_sim G) false)
+   (<> Holding_obj nil)
+   (< Cmd_after Before)
+   (> Cmd_before After)
+[]
+   ; Inject the fact that the command was executed.
+   (inj []
+      (fact Command (+ After 20ms) Before 1 1)
+      [SYNC_ONCE After 1 1 stdin nil]
+   )
+   ; h is now not holding.
+   (inj [Next_state:(mk.val e1 emulator_state [nil] 1) []])
+   (inj []
+      (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
+      [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+   )
+   (prb [1 "print" "pgm_cmd_release_h from command:" [Command]])
+1) |[]
+(ipgm pgm_cmd_release_h [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+pgm_cmd_grab_h:(pgm [] []
+   (ptn (fact G:(goal (fact Command:(cmd grab [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [nil] :) After: Before: ::) [])
+[]
+   (= (is_sim G) false)
+   (< Cmd_after Before)
+   (> Cmd_before After)
+[]
+   ; Inject the fact that the command was executed.
+   (inj []
+      (fact Command (+ After 20ms) Before 1 1)
+      [SYNC_ONCE After 1 1 stdin nil]
+   )
+   ; We already checked that s is at the hand's position. TODO: What if c is also there? 
+   (inj [Next_state:(mk.val e1 emulator_state [s] 1) []])
+   (inj []
+      (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
+      [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
+   )
+   (prb [1 "print" "pgm_cmd_grab_h from command:" [Command]])
+1) |[]
+(ipgm pgm_cmd_grab_h [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+; Match the emulator state and inject individual mk.val at the same time for each of
+; the state variables as needed.
+pgm_inject_mk_vals_holding:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+[]
+   (<> Holding_obj nil)
+[]
+   (inj [Val_holding:(mk.val h holding [Holding_obj] 1) []])
+   (inj []
+      (fact Val_holding After Before 1 1)
+      [SYNC_PERIODIC After 1 1 stdin nil]
+   )
+1) |[]
+(ipgm pgm_inject_mk_vals_holding [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+; The same as pgm_inject_mk_vals_holding for the case when not holding.
+pgm_inject_mk_vals_not_holding:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [nil] :) After: Before: ::) [])
+|[]
+[]
+   (inj [Val_holding:(mk.val h holding [] 1) []])
+   (inj []
+      (fact Val_holding After Before 1 1)
+      [SYNC_PERIODIC After 1 1 stdin nil]
+   )
+1) |[]
+(ipgm pgm_inject_mk_vals_not_holding [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]

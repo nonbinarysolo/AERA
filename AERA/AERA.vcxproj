@@ -243,6 +243,7 @@
     <None Include="replicode_v1.2\engineering\lockandkey.replicode" />
     <None Include="replicode_v1.2\engineering\POODL\hgs-pickup.replicode" />
     <None Include="replicode_v1.2\engineering\POODL\hgsl-pickup.replicode" />
+    <None Include="replicode_v1.2\engineering\POODL\toothbrush-twostep.replicode" />
     <None Include="replicode_v1.2\engineering\toothbrush1.replicode" />
     <None Include="replicode_v1.2\hand-grab-sphere-learn.external.replicode" />
     <None Include="replicode_v1.2\hand-grab-sphere-learn.external.ur.replicode" />
