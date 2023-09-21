@@ -10,6 +10,9 @@
 ; the agent may fill in):
 ;   (unscrew "screw" WITH "BLANK" UNTIL "removed" [BLANK])
 
+; Command for performing an operation
+!dfn (use :); arg0: a tool, arg1: a target
+
 ; Set up the objects and ontologies
 screw:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
 toothbrush:(ont 1) [[SYNC_ONCE now 0 forever root nil]]
@@ -20,10 +23,12 @@ t:(ent 1) [[SYNC_ONCE now 1 forever root nil]] ; A toothbrush
 k:(ent 1) [[SYNC_ONCE now 1 forever root nil]] ; A knife
 
 ; Set some facts about the objects
-s_is_a_screw:(mk.val h essence screw 1) |[]
+s_is_a_screw:(mk.val s essence screw 1) |[]
 (fact s_is_a_screw 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
-t_is_a_toothbrush:(mk.val h essence toothbrush 1) |[]
+t_is_a_toothbrush:(mk.val t essence toothbrush 1) |[]
 (fact t_is_a_toothbrush 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+k_is_a_knife:(mk.val k essence knife 1) |[]
+(fact k_is_a_knife 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
 
 ; Set up the emulator state and inject it
 ; emulator_state: [Is the screw unscrewed?, Is the toothbrush shaped like a screwdriver?]
@@ -52,17 +57,43 @@ pgm_inject_in_emulator_group:(pgm [] []
 ; M3: If we have a knife and a toothbrush (that is not screwdriver-shaped), we can use M2
 ; S1: I have a knife and a toothbrush
 
-; Set up the CSTs
-S0:
 
-S1:
+S0:(cst [] []
+   (fact (mk.val S: essence screw :) T0: T1: : :)              ; There exists a screw
+   (|fact (mk.val S: state "unscrewed" :) T0: T1: : :)         ; that is not yet unscrewed
+   (fact (mk.val D: essence toothbrush :) T0: T1: : :)         ; and a toothbrush
+   (fact (mk.val D: state "screwdriver-shaped" :) T0: T1: : :) ; that is screwdriver-shaped
+|[]
+|[]
+[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
+
+S1:(cst [] []
+   (fact (mk.val K: essence knife :) T0: T1: : :)               ; There exists a knife
+   (fact (mk.val D: essence toothbrush :) T0: T1: : :)          ; and a toothbrush
+   (|fact (mk.val D: state "screwdriver-shaped" :) T0: T1: : :) ; that is not yet screwdriver-shaped
+|[]
+|[]
+[stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
 ; Set up the models
-M0:
-M1:
+M0:(mdl [D: S: (ti T0: T1:)] []
+   (fact (cmd use [D: S:] :) T2: T1_cmd: : :)
+   (fact (mk.val S: state "unscrewed": :) T1_RHS: T3: : :)
+[]
+   T1_RHS:(+ T0 100ms)
+   T3:(+ T1 100ms)
+[]
+   T2:(- T1_RHS 80ms); Change 50ms delay to 20ms.
+   T1_cmd:(- T3 100ms)
+   T0:(- T1_RHS 100ms)
+   T1:(- T3 100ms)
+[stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
-M2:
-M3:
+
+; M1:
+
+; M2:
+; M3:
 
 
 ; When the hand H is asked to grab whatever, then H will be holding it.
