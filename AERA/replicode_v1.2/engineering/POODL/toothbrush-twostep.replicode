@@ -27,6 +27,10 @@ t_is_a_toothbrush:(mk.val t essence toothbrush 1) |[]
 k_is_a_knife:(mk.val k essence knife 1) |[]
 (fact k_is_a_knife 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
 
+; Set up some antifacts
+s_is_a_toothbrush:(mk.val s essence toothbrush 1) |[]
+(|fact s_is_a_toothbrush 0s:0ms:0us GIGASEC 1 1) [[SYNC_AXIOM now 1 forever stdin nil]]
+
 ; Set up the emulator state and inject it
 ; emulator_state: [Is the screw unscrewed?, Is the toothbrush shaped like a screwdriver?]
 e1:(ent 1) [[SYNC_ONCE now 1 forever root nil]]
@@ -57,9 +61,10 @@ pgm_inject_in_emulator_group:(pgm [] []
 ; S0: I have a screw and screwdriver-shaped thing
 S0:(cst [] []
    (fact (mk.val S: essence screw :) T0: T1: : :)              ; There exists a screw
-   (|fact (mk.val S: state "unscrewed" :) T0: T1: : :)         ; that is not yet unscrewed
-   (fact (mk.val D: essence toothbrush :) T0: T1: : :)         ; and a toothbrush
-   (fact (mk.val D: state "screwdriver-shaped" :) T0: T1: : :) ; that is screwdriver-shaped
+   (fact (mk.val S: state "screwed in" :) T0: T1: : :)         ; that is not yet unscrewed
+   (fact (mk.val T: essence toothbrush :) T0: T1: : :)         ; and a toothbrush
+   (fact (mk.val T: state "screwdriver-shaped" :) T0: T1: : :) ; that is screwdriver-shaped
+   ; (|fact (mk.val S: essence toothbrush :) T0: T1: : :) ; that is screwdriver-shaped
 |[]
 |[]
 [stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
@@ -67,17 +72,17 @@ S0:(cst [] []
 ; S1: I have a knife and a toothbrush
 S1:(cst [] []
    (fact (mk.val K: essence knife :) T0: T1: : :)               ; There exists a knife
-   (fact (mk.val D: essence toothbrush :) T0: T1: : :)          ; and a toothbrush
-   (|fact (mk.val D: state "screwdriver-shaped" :) T0: T1: : :) ; that is not yet screwdriver-shaped
+   (fact (mk.val T: essence toothbrush :) T0: T1: : :)          ; and a toothbrush
+   (fact (mk.val T: state "toothbrush" :) T0: T1: : :) ; that is not yet screwdriver-shaped
 |[]
 |[]
 [stdin] 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
 ; === Set up the models ===
 ; M0: If we use a screwdriver-shaped thing on a screw, it will become unscrewed
-M0:(mdl [D: S: (ti T0: T1:)] []
-   (fact (cmd use_tool [D: S:] :) T2: T1_cmd: : :)
-   (fact (mk.val S: state "unscrewed" :) T1_RHS: T3: : :)
+M0:(mdl [T: S: (ti T0: T1:)] []
+   (fact (cmd use_tool [T: S:] :) T2: T1_cmd: : :)
+   (fact (mk.val S: state "unscrewed" 1) T1_RHS: T3: : :)
 []
    T1_RHS:(+ T0 100ms)
    T3:(+ T1 100ms)
@@ -91,8 +96,8 @@ M0:(mdl [D: S: (ti T0: T1:)] []
 
 ; M1: If we have a screw and a screwdriver-shaped thing, we can use M0
 M1:(mdl [] []
-   (fact (icst S0 [] [D: S:] : :) T0: T1: : :)
-   (fact (imdl M0 [D: S: (ti T0: T1:)] [T1_RHS: T3:] : :) T0: T1: : :)
+   (fact (icst S0 [] [T: S:] : :) T0: T1: : :)
+   (fact (imdl M0 [T: S: (ti T0: T1:)] [T1_RHS: T3:] : :) T0: T1: : :)
 |[]
 |[]
 [stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
@@ -100,7 +105,7 @@ M1:(mdl [] []
 ; M2: If we whittle a toothbrush with a knife, it will be screwdriver-shaped
 M2:(mdl [K: T: (ti T0: T1:)] []
    (fact (cmd use_tool [K: T:] :) T2: T1_cmd: : :)
-   (fact (mk.val S: state "screwdriver-shaped" :) T1_RHS: T3: : :)
+   (fact (mk.val T: state "screwdriver-shaped" 1) T1_RHS: T3: : :)
 []
    T1_RHS:(+ T0 100ms)
    T3:(+ T1 100ms)
@@ -121,13 +126,8 @@ M3:(mdl [] []
 [stdin] 1 1 1 1 1) [[SYNC_ONCE now 0 forever primary nil 1]]
 
 
-
-
-
-
+; === Setup and Drive Maintenance ===
 !def DRIVE_START 300ms
-
-; Initial conditions.
 start:(pgm [] [] [] []
    (inj [State:(mk.val e1 emulator_state [false false] 1) []])
    (inj []
@@ -139,6 +139,7 @@ start:(pgm [] [] [] []
 
 m_drive:(mdl [] []
    ; The goal target timings are the same as the drive timings.
+   ; (fact (mk.val t state "screwdriver-shaped" 1) T0: T1: 1 1)
    (fact (mk.val s state "unscrewed" 1) T0: T1: 1 1)
    (fact run T0: T1: ::)
 |[]
@@ -147,7 +148,7 @@ m_drive:(mdl [] []
 
 pgm_inject_drive:(pgm [] []
    ; This fact repeats periodically. We use it as a "heartbeat".
-   (ptn (fact (mk.val h essence hand :) After: Before: ::) [])
+   (ptn (fact (mk.val s essence screw :) After: Before: ::) [])
 []
    (>= After (+ this.vw.ijt DRIVE_START))
 []
@@ -166,12 +167,12 @@ pgm_inject_drive:(pgm [] []
 
 ; Before DRIVE_START, just re-inject the same values.
 pgm_before_drive:(pgm [] []
-   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+   (ptn (fact (mk.val e1 emulator_state [Unscrewed: Shaped:] :) After: Before: ::) [])
 []
    (< After (+ this.vw.ijt DRIVE_START))
 []
    ; All state variables keep the same value.
-   (inj [Next_state:(mk.val e1 emulator_state [Holding_obj] 1) []])
+   (inj [Next_state:(mk.val e1 emulator_state [Unscrewed Shaped] 1) []])
    (inj []
       (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
       [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
@@ -180,12 +181,16 @@ pgm_before_drive:(pgm [] []
 (ipgm pgm_before_drive [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
    [SYNC_ONCE now 0 forever emulator nil 1]
 
-pgm_cmd_release_h:(pgm [] []
-   (ptn (fact G:(goal (fact Command:(cmd release [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
-   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+
+; === Emulator Interaction ===
+; Unscrew something with a screwdriver-shaped object
+pgm_cmd_unscrew:(pgm [] []
+   (ptn (fact G:(goal (fact Command:(cmd use_tool [t s] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [Unscrewed: Shaped:] :) After: Before: ::) [])
 []
    (= (is_sim G) false)
-   (<> Holding_obj nil)
+   (= Unscrewed false)
+   (= Shaped true)
    (< Cmd_after Before)
    (> Cmd_before After)
 []
@@ -194,22 +199,25 @@ pgm_cmd_release_h:(pgm [] []
       (fact Command (+ After 20ms) Before 1 1)
       [SYNC_ONCE After 1 1 stdin nil]
    )
-   ; h is now not holding.
-   (inj [Next_state:(mk.val e1 emulator_state [nil] 1) []])
+   ; The screw is now unscrewed
+   (inj [Next_state:(mk.val e1 emulator_state [true true] 1) []])
    (inj []
       (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
       [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
    )
-   (prb [1 "print" "pgm_cmd_release_h from command:" [Command]])
+   (prb [1 "print" "pgm_cmd_unscrew from command:" [Command]])
 1) |[]
-(ipgm pgm_cmd_release_h [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+(ipgm pgm_cmd_unscrew [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
    [SYNC_ONCE now 0 forever emulator nil 1]
 
-pgm_cmd_grab_h:(pgm [] []
-   (ptn (fact G:(goal (fact Command:(cmd grab [h] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
-   (ptn (fact (mk.val e1 emulator_state [nil] :) After: Before: ::) [])
+
+; Whittle a toothbrush down to a screwdriver-shaped object
+pgm_cmd_whittle:(pgm [] []
+   (ptn (fact G:(goal (fact Command:(cmd use_tool [k t] ::) Cmd_after: Cmd_before: ::) ::) ::) [])
+   (ptn (fact (mk.val e1 emulator_state [Unscrewed: Shaped:] :) After: Before: ::) [])
 []
    (= (is_sim G) false)
+   (= Shaped false)
    (< Cmd_after Before)
    (> Cmd_before After)
 []
@@ -218,43 +226,79 @@ pgm_cmd_grab_h:(pgm [] []
       (fact Command (+ After 20ms) Before 1 1)
       [SYNC_ONCE After 1 1 stdin nil]
    )
-   ; We already checked that s is at the hand's position. TODO: What if c is also there? 
-   (inj [Next_state:(mk.val e1 emulator_state [s] 1) []])
+   ; The toothbrush is now screwdriver-shaped
+   (inj [Next_state:(mk.val e1 emulator_state [Unscrewed true] 1) []])
    (inj []
       (fact Next_state (+ After sampling_period) (+ Before sampling_period) 1 1)
       [SYNC_PERIODIC (+ After sampling_period) 1 1 emulator nil]
    )
-   (prb [1 "print" "pgm_cmd_grab_h from command:" [Command]])
+   (prb [1 "print" "pgm_cmd_whittle from command:" [Command]])
 1) |[]
-(ipgm pgm_cmd_grab_h [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+(ipgm pgm_cmd_whittle [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
    [SYNC_ONCE now 0 forever emulator nil 1]
 
-; Match the emulator state and inject individual mk.val at the same time for each of
-; the state variables as needed.
-pgm_inject_mk_vals_holding:(pgm [] []
-   (ptn (fact (mk.val e1 emulator_state [Holding_obj:] :) After: Before: ::) [])
+
+; === Inject emulator states ===
+; Reinject that the screw is still screwed in (if that's the case)
+pgm_inject_mk_vals_screwedin:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [Unscrewed: Shaped:] :) After: Before: ::) [])
 []
-   (<> Holding_obj nil)
+   (= Unscrewed false)
 []
-   (inj [Val_holding:(mk.val h holding [Holding_obj] 1) []])
+   (inj [Val_state:(mk.val s state "screwed in" 1) []])
    (inj []
-      (fact Val_holding After Before 1 1)
+      (fact Val_state After Before 1 1)
       [SYNC_PERIODIC After 1 1 stdin nil]
    )
+   (prb [1 "print" "s is screwed in" []])
 1) |[]
-(ipgm pgm_inject_mk_vals_holding [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+(ipgm pgm_inject_mk_vals_screwedin [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
    [SYNC_ONCE now 0 forever emulator nil 1]
 
-; The same as pgm_inject_mk_vals_holding for the case when not holding.
-pgm_inject_mk_vals_not_holding:(pgm [] []
-   (ptn (fact (mk.val e1 emulator_state [nil] :) After: Before: ::) [])
-|[]
+; Reinject that the screw is unscrewed (if that's the case)
+pgm_inject_mk_vals_unscrewed:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [Unscrewed: Shaped:] :) After: Before: ::) [])
 []
-   (inj [Val_holding:(mk.val h holding [] 1) []])
+   (= Unscrewed true)
+[]
+   (inj [Val_state:(mk.val s state "unscrewed" 1) []])
    (inj []
-      (fact Val_holding After Before 1 1)
+      (fact Val_state After Before 1 1)
       [SYNC_PERIODIC After 1 1 stdin nil]
    )
+   (prb [1 "print" "s is unscrewed" []])
 1) |[]
-(ipgm pgm_inject_mk_vals_not_holding [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+(ipgm pgm_inject_mk_vals_unscrewed [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+; Reinject that the toothbrush is not screwdriver-shaoed (if that's the case)
+pgm_inject_mk_vals_no_screwdriver:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [Unscrewed: Shaped:] :) After: Before: ::) [])
+[]
+   (= Shaped false)
+[]
+   (inj [Val_state:(mk.val t state "toothbrush" 1) []])
+   (inj []
+      (fact Val_state After Before 1 1)
+      [SYNC_PERIODIC After 1 1 stdin nil]
+   )
+   (prb [1 "print" "t is not screwdriver-shaped" []])
+1) |[]
+(ipgm pgm_inject_mk_vals_no_screwdriver [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
+   [SYNC_ONCE now 0 forever emulator nil 1]
+
+; Reinject that the toothbrush is screwdriver-shaoed (if that's the case)
+pgm_inject_mk_vals_screwdriver:(pgm [] []
+   (ptn (fact (mk.val e1 emulator_state [Unscrewed: Shaped:] :) After: Before: ::) [])
+[]
+   (= Shaped true)
+[]
+   (inj [Val_state:(mk.val t state "screwdriver-shaped" 1) []])
+   (inj []
+      (fact Val_state After Before 1 1)
+      [SYNC_PERIODIC After 1 1 stdin nil]
+   )
+   (prb [1 "print" "t is screwdriver-shaped" []])
+1) |[]
+(ipgm pgm_inject_mk_vals_screwdriver [] RUN_ALWAYS MAX_TIME VOLATILE NOTIFY 1) []
    [SYNC_ONCE now 0 forever emulator nil 1]
