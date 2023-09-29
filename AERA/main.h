@@ -119,6 +119,11 @@ public:
 	// Create a new instance and set it up
 	AERA_interface(const char* settings_file_name, const char* decompiled_file_name);
 
+	// Step the diagnostic time state once
+	bool step() {
+		return diagnostic_time_state_->step();
+	}
+
 	// Run in diagnostic time for a certain amount of time
 	// Returns false when AERA has run to the end and true otherwise
 	bool runFor(milliseconds time_step);
