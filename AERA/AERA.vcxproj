@@ -482,7 +482,6 @@
     <ClInclude Include="..\usr_operators\TestProgram\test_program.h" />
     <ClInclude Include="..\usr_operators\types.h" />
     <ClInclude Include="..\usr_operators\usr_operators.h" />
-    <ClInclude Include="AERA_main.h" />
     <ClInclude Include="IODevices\TCP\AERA_Protobuf\tcp_connection.h" />
     <ClInclude Include="IODevices\TCP\AERA_Protobuf\tcp_data_message.pb.h" />
     <ClInclude Include="IODevices\TCP\AERA_Protobuf\utils.h" />

@@ -101,7 +101,7 @@
 #include "IODevices\video_screen\video_screen_io_device.h"
 #include "test_mem.h"
 #include "settings.h"
-#include "AERA_main.h"
+#include "main.h"
 
 
 //#define DECOMPILE_ONE_BY_ONE
