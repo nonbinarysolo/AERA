@@ -525,7 +525,13 @@ AERA_instance::AERA_instance(const char* file_name, const char* decompiled_file_
   }
 
   std::cout << "> compiling ...\n";
+#ifdef USE_SHARED_LIBRARIES
+  r_exec::SharedFunctionLibrary userOperatorLibrary;
+  if (!userOperatorLibrary.load(settings.usr_operator_path_.c_str()))
+    return 2;
+#else
   UserOperatorLibrary userOperatorLibrary;
+#endif
 
   if (settings_->reduction_core_count_ == 0 && settings_->time_core_count_ == 0) {
     // Below, we will use run_in_diagnostic_time.
@@ -566,15 +572,14 @@ AERA_instance::AERA_instance(const char* file_name, const char* decompiled_file_
         mem_ = new TestMem<r_exec::LObject, r_exec::MemVolatile>();
     }
     else if (settings_->io_device_.compare("tcp_io_device") == 0) {
-      string port = "8080";
       int err = 0;
       if (settings_->get_objects_) {
-        mem_ = new tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemStatic>();
-        err = static_cast<tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemStatic>*>(mem_)->initTCP(port);
+        mem_ = new tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemStatic>(settings_->number_of_servers_, settings_->number_of_clients_, settings_->server_configurations_, settings_->client_configurations_);
+        err = static_cast<tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemStatic>*>(mem_)->initTCP();
       }
       else {
-        mem_ = new tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemVolatile>();
-        err = static_cast<tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemVolatile>*>(mem_)->initTCP(port);
+        mem_ = new tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemVolatile>(settings_->number_of_servers_, settings_->number_of_clients_, settings_->server_configurations_, settings_->client_configurations_);
+        err = static_cast<tcp_io_device::TcpIoDevice<r_exec::LObject, r_exec::MemVolatile>*>(mem_)->initTCP();
       }
       if (err != 0) {
         cout << "ERROR: Could not connect to a TCP client" << endl;
