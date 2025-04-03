@@ -110,7 +110,7 @@ using namespace r_code;
 using namespace r_comp;
 
 // Comment out this definition to use statically-linked libraries.
-#define USE_SHARED_LIBRARIES
+//#define USE_SHARED_LIBRARIES
 
 #ifndef USE_SHARED_LIBRARIES
 /**
@@ -287,16 +287,6 @@ void write_to_file(r_comp::Image* image, std::string& image_path, Decompiler* de
   }
 }
 
-/**
- * UserOperatorLibrary extends FunctionLibrary to implement
- * functionName where the user operator functions are statically linked.
- */
-class UserOperatorLibrary : public r_exec::FunctionLibrary {
-public:
-  void* getFunction(const char* function_name) override {
-    return GetUserOperatorFunction(function_name);
-  }
-};
 
 int32 start_AERA(const char* file_name, const char* decompiled_file_name) {
 
